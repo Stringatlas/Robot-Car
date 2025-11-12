@@ -1,9 +1,3 @@
-/* ================================================
-   ESP32 Robot Car - Common Base Styles
-   Shared across all pages for consistent design
-   ================================================ */
-
-/* ============ Color Palette ============ */
 :root {
     --color-primary: #4CAF50;
     --color-primary-hover: #45a049;
@@ -30,7 +24,6 @@
     --border-light: #555;
 }
 
-/* ============ Base Elements ============ */
 * {
     box-sizing: border-box;
 }
@@ -44,7 +37,6 @@ body {
     line-height: 1.6;
 }
 
-/* ============ Typography ============ */
 h1 {
     color: var(--color-primary);
     text-align: center;

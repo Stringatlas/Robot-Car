@@ -1,6 +1,8 @@
 #include "WebServer.h"
 #include "config.h"
 #include "Telemetry.h"
+#include "../utils/ConfigManager.h"
+#include "../utils/JsonBuilder.h"
 
 WebServerManager::WebServerManager(int port) 
     : server(port), ws("/ws"), leftEncoder(nullptr), rightEncoder(nullptr), driveController(nullptr), batteryMonitor(nullptr), velocityController(nullptr), configManager(nullptr), lastUpdate(0), controllingClientId(0),
@@ -45,17 +47,12 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                    client->id(), client->remoteIP().toString().c_str());
         
         // Send the client their ID
-        String welcomeMsg = "{\"type\":\"welcome\",\"clientId\":" + String(client->id()) + "}";
-        client->text(welcomeMsg);
+        client->text(WebSocketMessageBuilder::buildWelcomeMessage(client->id()));
         
         // Send recent logs to new client
         auto recentLogs = Telemetry::getInstance().getRecentLogs(20);
         for (const auto& logMsg : recentLogs) {
-            String escaped = logMsg;
-            escaped.replace("\"", "\\\"");
-            escaped.replace("\n", "\\n");
-            String json = "{\"type\":\"log\",\"message\":\"" + escaped + "\"}";
-            client->text(json);
+            client->text(WebSocketMessageBuilder::buildLogMessage(logMsg));
         }
         
         // If this is the first client, give them control automatically
@@ -146,7 +143,7 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                         velocityController->setVelocity(velocity, velocity);
                         TELEM_LOGF("🎯 Velocity command: %.1f cm/s", velocity);
                         // Acknowledge command back to sender for client-side debugging
-                        String ack = "COMMAND_ACK:VELOCITY:" + String(velocity, 1);
+                        String ack = WebSocketMessageBuilder::buildCommandAck("VELOCITY", String(velocity, 1));
                         client->text(ack);
                         // Also broadcast to everyone so other clients can see
                         ws.textAll(ack);
@@ -217,8 +214,7 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                         }
                         
                         velocityController->setVelocityToPWMPolynomial(coeffs, degree);
-                        String ack = "COMMAND_ACK:POLY_VEL2PWM:degree=" + String(degree);
-                        ws.textAll(ack);
+                        ws.textAll(WebSocketMessageBuilder::buildCommandAck("POLY_VEL2PWM", "degree=" + String(degree)));
                     }
                     
                 } else if (message.startsWith("POLY_PWM2VEL:")) {
@@ -244,15 +240,80 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                         }
                         
                         velocityController->setPWMToVelocityPolynomial(coeffs, degree);
-                        String ack = "COMMAND_ACK:POLY_PWM2VEL:degree=" + String(degree);
-                        ws.textAll(ack);
+                        ws.textAll(WebSocketMessageBuilder::buildCommandAck("POLY_PWM2VEL", "degree=" + String(degree)));
                     }
                     
                 } else if (message.startsWith("POLY_ENABLE:")) {
                     bool enable = message.substring(12) == "true";
                     velocityController->enablePolynomialMapping(enable);
-                    String ack = "COMMAND_ACK:POLY_ENABLE:" + String(enable ? "true" : "false");
-                    ws.textAll(ack);
+                    ws.textAll(WebSocketMessageBuilder::buildCommandAck("POLY_ENABLE", enable ? "true" : "false"));
+                    
+                } else if (message == "CONFIG_GET") {
+                    // Send current configuration to requesting client
+                    if (configManager) {
+                        String configJson = configManager->toJson();
+                        String response = "CONFIG_DATA:" + configJson;
+                        client->text(response);
+                        TELEM_LOG("Configuration sent to client");
+                    } else {
+                        client->text("CONFIG_ERROR:ConfigManager not initialized");
+                    }
+                    
+                } else if (message.startsWith("CONFIG_SET:")) {
+                    // Update configuration from JSON
+                    if (configManager) {
+                        String jsonStr = message.substring(11);
+                        if (configManager->updateFromJson(jsonStr)) {
+                            if (configManager->save()) {
+                                ws.textAll("CONFIG_SAVED");
+                                TELEM_LOG("✓ Configuration updated and saved");
+                                
+                                // Apply the new configuration to velocity controller
+                                ConfigManager::Config& cfg = configManager->getConfig();
+                                velocityController->setFeedforwardGain(cfg.feedforwardGain);
+                                velocityController->setDeadzone(cfg.deadzonePWM);
+                                velocityController->enablePID(cfg.pidEnabled);
+                                velocityController->setPIDGains(cfg.pidKp, cfg.pidKi, cfg.pidKd);
+                                velocityController->enablePolynomialMapping(cfg.polynomialEnabled);
+                                
+                                // Set polynomial coefficients
+                                float vel2pwm[] = {cfg.vel2pwm_a0, cfg.vel2pwm_a1, cfg.vel2pwm_a2, cfg.vel2pwm_a3};
+                                float pwm2vel[] = {cfg.pwm2vel_b0, cfg.pwm2vel_b1, cfg.pwm2vel_b2, cfg.pwm2vel_b3};
+                                velocityController->setVelocityToPWMPolynomial(vel2pwm, 3);
+                                velocityController->setPWMToVelocityPolynomial(pwm2vel, 3);
+                                
+                                TELEM_LOG("✓ Configuration applied to controllers");
+                            } else {
+                                client->text("CONFIG_ERROR:Failed to save configuration");
+                            }
+                        } else {
+                            client->text("CONFIG_ERROR:Failed to parse configuration JSON");
+                        }
+                    } else {
+                        client->text("CONFIG_ERROR:ConfigManager not initialized");
+                    }
+                    
+                } else if (message == "CONFIG_RESET") {
+                    // Reset configuration to defaults
+                    if (configManager) {
+                        configManager->reset();
+                        if (configManager->save()) {
+                            ws.textAll("CONFIG_RESET");
+                            TELEM_LOG("✓ Configuration reset to defaults");
+                            
+                            // Apply default configuration to velocity controller
+                            ConfigManager::Config& cfg = configManager->getConfig();
+                            velocityController->setFeedforwardGain(cfg.feedforwardGain);
+                            velocityController->setDeadzone(cfg.deadzonePWM);
+                            velocityController->enablePID(cfg.pidEnabled);
+                            velocityController->setPIDGains(cfg.pidKp, cfg.pidKi, cfg.pidKd);
+                            velocityController->enablePolynomialMapping(cfg.polynomialEnabled);
+                        } else {
+                            client->text("CONFIG_ERROR:Failed to save default configuration");
+                        }
+                    } else {
+                        client->text("CONFIG_ERROR:ConfigManager not initialized");
+                    }
                 }
             }
         }
@@ -260,9 +321,7 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
 }
 
 void WebServerManager::broadcastControlStatus() {
-    // Build JSON message with control status
-    String json = "{\"type\":\"control\",\"controllingClientId\":" + String(controllingClientId) + "}";
-    ws.textAll(json);
+    ws.textAll(WebSocketMessageBuilder::buildControlStatus(controllingClientId));
 }
 
 void WebServerManager::broadcastEncoderData() {
@@ -272,42 +331,24 @@ void WebServerManager::broadcastEncoderData() {
     // Read battery voltage
     float voltage = batteryMonitor->getVoltage();
     
-    // Build JSON string
-    String json = "{";
-    json += "\"left\":{";
-    json += "\"count\":" + String(leftEncoder->getCount()) + ",";
-    json += "\"revolutions\":" + String(leftEncoder->getRevolutions(), 2) + ",";
-    json += "\"distance\":" + String(leftEncoder->getDistance(), 2) + ",";
-    json += "\"velocity\":" + String(leftEncoder->getVelocity(), 2) + ",";
-    json += "\"rpm\":" + String(leftEncoder->getRPM(), 1);
-    json += "},";
-    json += "\"right\":{";
-    json += "\"count\":" + String(rightEncoder->getCount()) + ",";
-    json += "\"revolutions\":" + String(rightEncoder->getRevolutions(), 2) + ",";
-    json += "\"distance\":" + String(rightEncoder->getDistance(), 2) + ",";
-    json += "\"velocity\":" + String(rightEncoder->getVelocity(), 2) + ",";
-    json += "\"rpm\":" + String(rightEncoder->getRPM(), 1);
-    json += "},";
-    json += "\"battery\":" + String(voltage, 2);
-    json += ",";
-    json += "\"motorLeft\":" + String(driveController->getLastLeftPWM());
-    json += ",";
-    json += "\"motorRight\":" + String(driveController->getLastRightPWM());
-    json += ",";
-    json += "\"leftVelError\":" + String(velocityController->getLeftVelocityError(), 2);
-    json += ",";
-    json += "\"rightVelError\":" + String(velocityController->getRightVelocityError(), 2);
-    json += "}";
-    
-    // Broadcast to all connected clients
+    // Build and broadcast encoder JSON using helper
+    String json = EncoderJsonBuilder::buildEncoderData(
+        leftEncoder->getCount(), leftEncoder->getRevolutions(), leftEncoder->getDistance(), 
+        leftEncoder->getVelocity(), leftEncoder->getRPM(),
+        rightEncoder->getCount(), rightEncoder->getRevolutions(), rightEncoder->getDistance(),
+        rightEncoder->getVelocity(), rightEncoder->getRPM(),
+        voltage,
+        driveController->getLastLeftPWM(), driveController->getLastRightPWM(),
+        velocityController->getLeftVelocityError(), velocityController->getRightVelocityError()
+    );
     ws.textAll(json);
     
     // Also send velocity error message for calibration page
-    String velError = "VEL_ERROR:" + 
-                     String(velocityController->getLeftVelocityError(), 2) + "," +
-                     String(velocityController->getRightVelocityError(), 2) + "," +
-                     String(velocityController->isPIDEnabled() ? "true" : "false");
-    ws.textAll(velError);
+    ws.textAll(WebSocketMessageBuilder::buildVelocityError(
+        velocityController->getLeftVelocityError(),
+        velocityController->getRightVelocityError(),
+        velocityController->isPIDEnabled()
+    ));
 }
 
 void WebServerManager::handleWebSocket() {
@@ -333,23 +374,13 @@ void WebServerManager::setupRoutes() {
         // Read battery voltage
         float voltage = batteryMonitor->getVoltage();
         
-        String json = "{";
-        json += "\"left\":{";
-        json += "\"count\":" + String(leftEncoder->getCount()) + ",";
-        json += "\"revolutions\":" + String(leftEncoder->getRevolutions(), 2) + ",";
-        json += "\"distance\":" + String(leftEncoder->getDistance(), 2) + ",";
-        json += "\"velocity\":" + String(leftEncoder->getVelocity(), 2) + ",";
-        json += "\"rpm\":" + String(leftEncoder->getRPM(), 1);
-        json += "},";
-        json += "\"right\":{";
-        json += "\"count\":" + String(rightEncoder->getCount()) + ",";
-        json += "\"revolutions\":" + String(rightEncoder->getRevolutions(), 2) + ",";
-        json += "\"distance\":" + String(rightEncoder->getDistance(), 2) + ",";
-        json += "\"velocity\":" + String(rightEncoder->getVelocity(), 2) + ",";
-        json += "\"rpm\":" + String(rightEncoder->getRPM(), 1);
-        json += "},";
-        json += "\"battery\":" + String(voltage, 2);
-        json += "}";
+        String json = EncoderJsonBuilder::buildSimpleEncoderData(
+            leftEncoder->getCount(), leftEncoder->getRevolutions(), leftEncoder->getDistance(),
+            leftEncoder->getVelocity(), leftEncoder->getRPM(),
+            rightEncoder->getCount(), rightEncoder->getRevolutions(), rightEncoder->getDistance(),
+            rightEncoder->getVelocity(), rightEncoder->getRPM(),
+            voltage
+        );
         
         request->send(200, "application/json", json);
     });
@@ -364,17 +395,17 @@ void WebServerManager::setupRoutes() {
     // Configuration endpoints
     server.on("/api/config", HTTP_GET, [this](AsyncWebServerRequest *request){
         // Return current configuration as JSON
-        String json = "{";
-        json += "\"feedforwardGain\":" + String(velocityController->getFeedforwardGain(), 3) + ",";
-        json += "\"deadzonePWM\":" + String(velocityController->getDeadzone(), 1) + ",";
-        json += "\"pidEnabled\":" + String(velocityController->isPIDEnabled() ? "true" : "false") + ",";
         float kp, ki, kd;
         velocityController->getPIDGains(kp, ki, kd);
-        json += "\"pidKp\":" + String(kp, 3) + ",";
-        json += "\"pidKi\":" + String(ki, 3) + ",";
-        json += "\"pidKd\":" + String(kd, 3) + ",";
-        json += "\"polynomialEnabled\":" + String(velocityController->isPolynomialMappingEnabled() ? "true" : "false");
-        json += "}";
+        
+        String json = ConfigJsonBuilder::buildConfigResponse(
+            velocityController->getFeedforwardGain(),
+            velocityController->getDeadzone(),
+            velocityController->isPIDEnabled(),
+            kp, ki, kd,
+            velocityController->isPolynomialMappingEnabled()
+        );
+        
         request->send(200, "application/json", json);
     });
     
@@ -444,15 +475,10 @@ void WebServerManager::updateCalibration() {
         float rightVel = rightEncoder->getVelocity();
         
         // Send data point to client
-        String data = "CALIBRATION_POINT:" + String(calibrationPWM) + "," + 
-                      String(leftVel, 2) + "," + String(rightVel, 2);
-        ws.textAll(data);
+        ws.textAll(WebSocketMessageBuilder::buildCalibrationPoint(calibrationPWM, leftVel, rightVel));
         
         // Progress update
-        int progress = map(calibrationPWM, calibrationStartPWM, calibrationEndPWM, 0, 100);
-        String progressMsg = "CALIBRATION_PROGRESS:PWM " + String(calibrationPWM) + 
-                            "/" + String(calibrationEndPWM) + " (" + String(progress) + "%)";
-        ws.textAll(progressMsg);
+        ws.textAll(WebSocketMessageBuilder::buildCalibrationProgress(calibrationPWM, calibrationEndPWM, calibrationStartPWM));
         
         // Move to next PWM value
         calibrationPWM += calibrationStepSize;

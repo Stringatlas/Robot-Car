@@ -28,7 +28,7 @@ function addLogToConsole(message) {
         colorClass = 'console-info';
         console.info(message);
     } else {
-        colorClass = 'console-success';
+        colorClass = 'console-info';
         console.log(message);
     }
     

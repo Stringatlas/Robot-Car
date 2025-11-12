@@ -86,12 +86,10 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                     rightEncoder->reset();
                     TELEM_LOG("Encoders reset via WebSocket");
                 } else if (message == "REQUEST_CONTROL") {
-                    // Grant control to requesting client
                     controllingClientId = client->id();
                     TELEM_LOGF("Control granted to client #%u", client->id());
                     broadcastControlStatus();
                 } else if (message == "RELEASE_CONTROL") {
-                    // Release control
                     if (controllingClientId == client->id()) {
                         controllingClientId = 0;
                         TELEM_LOGF("Control released by client #%u", client->id());

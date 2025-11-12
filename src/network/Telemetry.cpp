@@ -13,7 +13,6 @@ void Telemetry::begin(AsyncWebSocket* wsPtr) {
 }
 
 void Telemetry::log(const String& message) {
-    // Also print to Serial for debugging
     Serial.println(message);
     
     // Add timestamp

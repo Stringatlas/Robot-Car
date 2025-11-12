@@ -12,20 +12,19 @@
     <script src="/components/console.js"></script>
 </head>
 <body>
-    <nav>
-        <div class="nav-content">
-            <a href="/" class="active">🚗 Control</a>
-            <a href="/calibration.html" class="inactive">🔧 Calibration</a>
-        </div>
-    </nav>
-    
-    <h1 style="text-align: center; margin: 20px 0;">ESP32 Robot Car</h1>
-    <p class="text-center">Status: <span id='status' class='connected'>Connected</span></p>
-    <p class="text-center" style="font-size: 18px;">Battery: <span id='battery-voltage' class="text-success font-bold">-- V</span> <span class="text-muted" style="font-size: 12px;">(erratic)</span></p>
-    
     <div class="main-layout">
         <!-- Main Content Column -->
         <div class="main-content">
+            <nav>
+                <div class="nav-content">
+                    <a href="/" class="active">🚗 Control</a>
+                    <a href="/calibration.html" class="inactive">🔧 Calibration</a>
+                </div>
+            </nav>
+            
+            <h1 style="text-align: center; margin: 20px 0;">ESP32 Robot Car</h1>
+            <p class="text-center">Status: <span id='status' class='connected'>Connected</span></p>
+            <p class="text-center" style="font-size: 18px;">Battery: <span id='battery-voltage' class="text-success font-bold">-- V</span> <span class="text-muted" style="font-size: 12px;">(erratic)</span></p>
             <div class="joystick-container">
                 <h2>Joystick Control</h2>
                 

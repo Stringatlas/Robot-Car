@@ -32,18 +32,17 @@
     </style>
 </head>
 <body>
-    <nav>
-        <div class="nav-content">
-            <a href="/" class="inactive">🚗 Control</a>
-            <a href="/calibration.html" class="active">🔧 Calibration</a>
-        </div>
-    </nav>
-    
-    <h1 style="text-align: center; margin: 20px 0;">🔧 Motor Calibration & Tuning</h1>
-    
     <div class="main-layout">
         <!-- Main Content Column -->
         <div class="main-content">
+            <nav>
+                <div class="nav-content">
+                    <a href="/" class="inactive">🚗 Control</a>
+                    <a href="/calibration.html" class="active">🔧 Calibration</a>
+                </div>
+            </nav>
+            
+            <h1 style="text-align: center; margin: 20px 0;">🔧 Motor Calibration & Tuning</h1>
         
         <!-- Direct Motor Control -->
         <div class="control-panel">
@@ -527,7 +526,7 @@
         function setFFGain() {
             const gain = parseFloat(document.getElementById('ff-gain-slider').value);
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('FF_GAIN:' + gain.toFixed(2));
+                WSManager.send('FF_GAIN:' + gain.toFixed(2));
                 console.log('Set FF gain:', gain);
             }
         }
@@ -541,7 +540,7 @@
         function setDeadzone() {
             const deadzone = parseInt(document.getElementById('deadzone-slider').value);
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('DEADZONE:' + deadzone);
+                WSManager.send('DEADZONE:' + deadzone);
                 console.log('Set deadzone:', deadzone);
             }
         }
@@ -549,14 +548,14 @@
         function setVelocity() {
             const velocity = parseFloat(document.getElementById('velocity-input').value);
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('VELOCITY:' + velocity.toFixed(1));
+                WSManager.send('VELOCITY:' + velocity.toFixed(1));
                 console.log('Set velocity:', velocity);
             }
         }
         
         function stopVelocity() {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('VELOCITY:0');
+                WSManager.send('VELOCITY:0');
             }
             document.getElementById('velocity-input').value = 0;
         }
@@ -572,7 +571,7 @@
             const message = `POLY_VEL2PWM:3,${a0},${a1},${a2},${a3}`;
             
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(message);
+                WSManager.send(message);
                 console.log('Sent velocity->PWM polynomial:', {a0, a1, a2, a3});
                 document.getElementById('polyStatus').textContent = 
                     `Velocity→PWM polynomial updated: a₀=${a0.toFixed(4)}, a₁=${a1.toFixed(4)}, a₂=${a2.toFixed(6)}, a₃=${a3.toFixed(8)}`;
@@ -591,7 +590,7 @@
             const message = `POLY_PWM2VEL:3,${b0},${b1},${b2},${b3}`;
             
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(message);
+                WSManager.send(message);
                 console.log('Sent PWM->velocity polynomial:', {b0, b1, b2, b3});
                 document.getElementById('polyStatus').textContent = 
                     `PWM→Velocity polynomial updated: b₀=${b0.toFixed(4)}, b₁=${b1.toFixed(4)}, b₂=${b2.toFixed(6)}, b₃=${b3.toFixed(8)}`;
@@ -604,7 +603,7 @@
             const enabled = document.getElementById('polyEnable').checked;
             
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('POLY_ENABLE:' + (enabled ? 'true' : 'false'));
+                WSManager.send('POLY_ENABLE:' + (enabled ? 'true' : 'false'));
                 console.log('Polynomial mapping:', enabled ? 'enabled' : 'disabled');
                 document.getElementById('polyStatus').textContent = enabled ? 
                     '✓ Polynomial mapping ENABLED - using cubic regression' : 
@@ -653,16 +652,16 @@
             
             // Make sure PID is disabled for clean step response
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('PID_ENABLE:false');
+                WSManager.send('PID_ENABLE:false');
                 // Start at zero
-                ws.send('VELOCITY:0');
+                WSManager.send('VELOCITY:0');
             }
             
             // After 500ms, apply step input and start timeout
             setTimeout(() => {
                 if (autotuneRunning && ws && ws.readyState === WebSocket.OPEN) {
                     autotuneData.startTime = Date.now(); // Reset start time
-                    ws.send('VELOCITY:' + targetVel.toFixed(1));
+                    WSManager.send('VELOCITY:' + targetVel.toFixed(1));
                     updateAutotuneStatus('Step applied! Measuring response...');
                     
                     // Set timeout to force completion after duration + 500ms buffer
@@ -691,7 +690,7 @@
             }
             
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('VELOCITY:0');
+                WSManager.send('VELOCITY:0');
             }
             
             updateAutotuneStatus('Autotuning stopped');
@@ -877,7 +876,7 @@
         
         function applyAutotuneGains() {
             if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send(`PID_GAINS:${autotuneData.kp.toFixed(3)},${autotuneData.ki.toFixed(3)},${autotuneData.kd.toFixed(3)}`);
+                WSManager.send(`PID_GAINS:${autotuneData.kp.toFixed(3)},${autotuneData.ki.toFixed(3)},${autotuneData.kd.toFixed(3)}`);
                 
                 // Update the PID tuning section inputs
                 document.getElementById('pidKp').value = autotuneData.kp.toFixed(3);
@@ -913,14 +912,14 @@
             updateStatus(`Starting ${motor} motor calibration...`);
             
             // Send start command
-            ws.send(`START_CALIBRATION:${motor},${startPWM},${endPWM},${stepSize},${holdTime}`);
+            WSManager.send(`START_CALIBRATION:${motor},${startPWM},${endPWM},${stepSize},${holdTime}`);
         }
 
         function stopCalibration() {
             calibrationRunning = false;
             currentMotor = null;
             
-            ws.send('STOP_CALIBRATION');
+            WSManager.send('STOP_CALIBRATION');
             
             document.getElementById('startLeft').disabled = false;
             document.getElementById('startRight').disabled = false;
@@ -1125,58 +1124,33 @@ Right Motor:
             const ki = parseFloat(document.getElementById('pidKi').value);
             const kd = parseFloat(document.getElementById('pidKd').value);
             
-            ws.send(`PID_GAINS:${kp},${ki},${kd}`);
+            WSManager.send(`PID_GAINS:${kp},${ki},${kd}`);
             console.log(`PID gains set: Kp=${kp}, Ki=${ki}, Kd=${kd}`);
         }
 
         function togglePID() {
             pidEnabled = !pidEnabled;
-            ws.send(`PID_ENABLE:${pidEnabled}`);
+            WSManager.send(`PID_ENABLE:${pidEnabled}`);
             document.getElementById('pidToggle').textContent = pidEnabled ? 'Disable PID' : 'Enable PID';
             console.log(`PID ${pidEnabled ? 'enabled' : 'disabled'}`);
         }
 
         function setTargetVelocity() {
             const vel = parseFloat(document.getElementById('targetVel').value);
-            ws.send(`VELOCITY:${vel}`);
+            WSManager.send(`VELOCITY:${vel}`);
             console.log(`Target velocity set: ${vel} cm/s`);
         }
 
         function stopMotors() {
-            ws.send('VELOCITY:0');
+            WSManager.send('VELOCITY:0');
             console.log('Motors stopped');
         }
 
-        // WebSocket message handler for calibration data
+        // Initialize on page load
         window.addEventListener('load', () => {
-            connectWebSocket();
             drawGrid();
-            
-            // Initialize slider displays
             updateFFGainDisplay();
             updateDeadzoneDisplay();
-            
-            // Override onmessage to handle calibration-specific messages
-            const originalOnMessage = ws?.onmessage;
-            if (ws) {
-                ws.addEventListener('message', (event) => {
-                    const data = event.data;
-                    
-                    if (data.startsWith('CALIBRATION_POINT:')) {
-                        const parts = data.substring(18).split(',');
-                        const pwm = parseInt(parts[0]);
-                        const leftVel = parseFloat(parts[1]);
-                        const rightVel = parseFloat(parts[2]);
-                        addDataPoint(pwm, leftVel, rightVel);
-                    } else if (data.startsWith('CALIBRATION_COMPLETE')) {
-                        stopCalibration();
-                        updateStatus('Calibration complete!');
-                    } else if (data.startsWith('CALIBRATION_PROGRESS:')) {
-                        const progress = data.substring(21);
-                        updateStatus(`Calibrating... ${progress}`);
-                    }
-                });
-            }
         });
     </script>
 </body>

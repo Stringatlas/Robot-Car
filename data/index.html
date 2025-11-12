@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no'>
+    <title>ESP32 Robot Car</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/index.css">
+</head>
+<body>
+    <nav style="background: #2a2a2a; padding: 15px; margin: -20px -20px 20px -20px; border-bottom: 2px solid #4CAF50;">
+        <div style="max-width: 1200px; margin: 0 auto; display: flex; gap: 20px; align-items: center;">
+            <a href="/" style="color: #4CAF50; text-decoration: none; font-weight: bold; font-size: 18px;">🚗 Control</a>
+            <a href="/calibration.html" style="color: #ccc; text-decoration: none; font-size: 16px;">🔧 Calibration</a>
+        </div>
+    </nav>
+    
+    <h1>ESP32 Robot Car</h1>
+    <p>Status: <span id='status' class='connected'>Connected</span></p>
+    <p style="font-size: 18px; margin: 10px 0;">Battery: <span id='battery-voltage' style="color: #4CAF50; font-weight: bold;">-- V</span> <span style="font-size: 12px; color: #888;">(erratic)</span></p>
+    
+    <div style="background: #222; padding: 20px; margin: 20px auto; border-radius: 8px; max-width: 500px; text-align: center;">
+        <h2 style="color: #4CAF50; margin-top: 0;">Joystick Control</h2>
+        
+        <!-- Control status and button -->
+        <div id='control-status' style="margin-bottom: 15px; padding: 10px; border-radius: 5px; background: #333;">
+            <span id='control-text'>Waiting for connection...</span>
+        </div>
+        <button id='control-btn' class='button' onclick='toggleControl()' style='display:none; margin-bottom: 15px;'>Request Control</button>
+        
+        <div id='joystick' style="opacity: 0.3;">
+            <div id='stick'></div>
+        </div>
+        <div style="margin-top: 10px; font-size: 14px; color: #888;">
+            X: <span id='joy-x'>0</span>, Y: <span id='joy-y'>0</span>
+        </div>
+        <div style="margin-top: 10px; font-size: 14px; color: #4CAF50;">
+            Motor L: <span id='motor-left'>0</span> | Motor R: <span id='motor-right'>0</span>
+        </div>
+    </div>
+    
+    <div class="encoder-data">
+        <h2>Left Encoder</h2>
+        <div class="data-row">
+            <span class="data-label">Count:</span>
+            <span class="data-value" id="left-count">0</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Revolutions:</span>
+            <span class="data-value" id="left-revs">0.00</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Distance:</span>
+            <span class="data-value" id="left-dist">0.00 cm</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Velocity:</span>
+            <span class="data-value" id="left-vel">0.00 cm/s</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">RPM:</span>
+            <span class="data-value" id="left-rpm">0.0</span>
+        </div>
+    </div>
+
+    <div class="encoder-data">
+        <h2>Right Encoder</h2>
+        <div class="data-row">
+            <span class="data-label">Count:</span>
+            <span class="data-value" id="right-count">0</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Revolutions:</span>
+            <span class="data-value" id="right-revs">0.00</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Distance:</span>
+            <span class="data-value" id="right-dist">0.00 cm</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">Velocity:</span>
+            <span class="data-value" id="right-vel">0.00 cm/s</span>
+        </div>
+        <div class="data-row">
+            <span class="data-label">RPM:</span>
+            <span class="data-value" id="right-rpm">0.0</span>
+        </div>
+    </div>
+
+    <div>
+        <button class='button' onclick='resetEncoders()'>Reset Encoders</button>
+    </div>
+    
+    <div style="background: #1a1a1a; padding: 20px; margin: 20px auto; border-radius: 8px; max-width: 800px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            <h2 style="color: #4CAF50; margin: 0;">System Console</h2>
+            <button class='button' onclick='clearConsole()' style="padding: 5px 15px; font-size: 12px;">Clear</button>
+        </div>
+        <div id="console" style="background: #0a0a0a; color: #0f0; font-family: 'Courier New', monospace; font-size: 12px; padding: 15px; border-radius: 4px; height: 300px; overflow-y: auto; border: 1px solid #333;">
+            <div style="color: #888;">Waiting for telemetry...</div>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/index.js"></script>
+</body>
+</html>

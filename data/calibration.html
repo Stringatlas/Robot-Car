@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Motor Calibration</title>
+    <link rel="stylesheet" href="/css/common.css">
+    <link rel="stylesheet" href="/css/calibration.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            padding: 0;
+            margin: 0;
+        }
+        nav {
+            background: #2a2a2a;
+            padding: 15px;
+            border-bottom: 2px solid #4CAF50;
+        }
+        nav .nav-content {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+        nav a {
+            text-decoration: none;
+            font-size: 16px;
+        }
+        nav a.active {
+            color: #4CAF50;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        nav a.inactive {
+            color: #ccc;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #4CAF50;
+            text-align: center;
+        }
+        .control-panel {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .button:hover {
+            background: #45a049;
+        }
+        .button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        .button.stop {
+            background: #f44336;
+        }
+        .button.stop:hover {
+            background: #da190b;
+        }
+        .status {
+            background: #333;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        .chart-container {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        canvas {
+            max-width: 100%;
+            background: #2a2a2a;
+        }
+        .data-table {
+            background: #222;
+            padding: 20px;
+            border-radius: 8px;
+            overflow-x: auto;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 10px;
+            text-align: center;
+            border: 1px solid #444;
+        }
+        th {
+            background: #333;
+            color: #4CAF50;
+        }
+        .config {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .config-item label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ccc;
+        }
+        .config-item input {
+            width: 100%;
+            padding: 8px;
+            background: #333;
+            border: 1px solid #555;
+            border-radius: 4px;
+            color: #fff;
+        }
+        .export-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <div class="nav-content">
+            <a href="/" class="inactive">🚗 Control</a>
+            <a href="/calibration.html" class="active">🔧 Calibration</a>
+        </div>
+    </nav>
+    
+    <div class="container">
+        <h1>🔧 Motor Calibration & Tuning</h1>
+        
+        <!-- Direct Motor Control -->
+        <div class="control-panel">
+            <h2>Direct Motor Control</h2>
+            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Directly command motor powers for basic testing (-1 to 1 range)</p>
+            <div class="config">
+                <div class="config-item">
+                    <label>Left Motor Power (-1 to 1):</label>
+                    <input type="number" id="left-motor-input" value="0" min="-1" max="1" step="0.1">
+                </div>
+                <div class="config-item">
+                    <label>Right Motor Power (-1 to 1):</label>
+                    <input type="number" id="right-motor-input" value="0" min="-1" max="1" step="0.1">
+                </div>
+            </div>
+            <div style="margin-top: 15px;">
+                <button class="button" onclick="setMotorPowers()">Set Motor Powers</button>
+                <button class="button stop" onclick="stopMotors()">Stop Motors</button>
+            </div>
+        </div>
+        
+        <!-- Manual Velocity Feedforward Tuning -->
+        <div class="control-panel">
+            <h2>Manual Velocity Feedforward Tuning</h2>
+            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Manually tune feedforward gain and deadzone parameters</p>
+            
+            <details style="margin-bottom: 15px; padding: 10px; background: #333; border-radius: 5px;">
+                <summary style="cursor: pointer; color: #4CAF50; font-weight: bold;">📖 Tuning Instructions</summary>
+                <div style="margin-top: 10px; font-size: 13px; color: #ccc; line-height: 1.6;">
+                    <strong style="color: #ff9800;">Step 1: Tune Deadzone</strong><br>
+                    1. Click "Zero" to set gain to 0<br>
+                    2. Set deadzone to 0<br>
+                    3. Slowly increase deadzone until wheels just barely start spinning<br>
+                    4. Add 5-10 PWM as margin<br><br>
+                    
+                    <strong style="color: #ff9800;">Step 2: Tune Gain</strong><br>
+                    1. Set deadzone to value from Step 1<br>
+                    2. Command velocity (try 20 cm/s)<br>
+                    3. Wait 2 seconds for steady state<br>
+                    4. If error is positive → increase gain<br>
+                    5. If error is negative → decrease gain<br>
+                    6. Repeat until error ≈ 0
+                </div>
+            </details>
+            
+            <div class="config">
+                <div class="config-item">
+                    <label>Feedforward Gain (PWM per cm/s):</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="range" id="ff-gain-slider" min="0" max="10" step="0.1" value="2.0" 
+                               style="flex: 1;" oninput="updateFFGainDisplay()">
+                        <span id="ff-gain-value" style="min-width: 50px;">2.0</span>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <label>Deadzone (PWM):</label>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="range" id="deadzone-slider" min="0" max="100" step="1" value="30" 
+                               style="flex: 1;" oninput="updateDeadzoneDisplay()">
+                        <span id="deadzone-value" style="min-width: 50px;">30</span>
+                    </div>
+                </div>
+                <div class="config-item">
+                    <label>Target Velocity (cm/s):</label>
+                    <input type="number" id="velocity-input" value="0" min="-100" max="100" step="5">
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <button class="button" onclick="setFFGain()">Set Gain</button>
+                <button class="button" onclick="zeroGain()">Zero Gain</button>
+                <button class="button" onclick="setDeadzone()">Set Deadzone</button>
+                <button class="button" onclick="setVelocity()">Set Velocity</button>
+                <button class="button stop" onclick="stopVelocity()">Stop</button>
+            </div>
+            
+            <div class="status" id="velocityStatus">
+                Velocity Tracking - Left Error: 0.0 cm/s | Right Error: 0.0 cm/s
+            </div>
+        </div>
+        
+        <!-- Polynomial Mapping Configuration -->
+        <div class="control-panel">
+            <h2>🔢 Polynomial Velocity Mapping</h2>
+            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">
+                Use cubic polynomial regression for accurate PWM ↔ velocity mapping
+            </p>
+            
+            <details style="margin-bottom: 15px; padding: 10px; background: #333; border-radius: 5px;">
+                <summary style="cursor: pointer; color: #4CAF50; font-weight: bold;">📖 About Polynomial Mapping</summary>
+                <div style="margin-top: 10px; font-size: 13px; color: #ccc; line-height: 1.6;">
+                    Motors have <strong>non-linear</strong> response curves. Linear feedforward (PWM = deadzone + gain×velocity) 
+                    is inaccurate, especially at low/high speeds.<br><br>
+                    
+                    <strong style="color: #ff9800;">Polynomial Regression (x³):</strong><br>
+                    • PWM → Velocity: <code>v = a₀ + a₁·PWM + a₂·PWM² + a₃·PWM³</code><br>
+                    • Velocity → PWM: <code>PWM = b₀ + b₁·v + b₂·v² + b₃·v³</code><br><br>
+                    
+                    <strong>How to get coefficients:</strong><br>
+                    1. Run "Automatic Voltage Sweep" to collect PWM vs velocity data<br>
+                    2. Export CSV and run polynomial regression in Python/MATLAB/Excel<br>
+                    3. Enter coefficients below and enable polynomial mapping
+                </div>
+            </details>
+            
+            <div style="display: flex; gap: 20px; margin-bottom: 20px;">
+                <!-- Velocity to PWM Polynomial -->
+                <div style="flex: 1; border: 1px solid #555; padding: 15px; border-radius: 5px;">
+                    <h3 style="color: #4CAF50; margin-bottom: 10px;">Velocity → PWM Control</h3>
+                    <p style="color: #888; font-size: 12px; margin-bottom: 10px;">
+                        Polynomial: PWM = a₀ + a₁·v + a₂·v² + a₃·v³
+                    </p>
+                    <div style="display: grid; gap: 8px;">
+                        <div>
+                            <label style="color: #ccc; font-size: 13px;">a₀ (constant):</label>
+                            <input type="number" id="vel2pwm_a0" step="0.0001" value="0" style="width: 100%; padding: 5px; background: #2a2a2a; border: 1px solid #555; color: #fff;">
+                        </div>
+                        <div>
+                            <label style="color: #ccc; font-size: 13px;">a₁ (linear):</label>
+                            <input type="number" id="vel2pwm_a1" step="0.0001" value="0" style="width: 100%; padding: 5px; background: #2a2a2a; border: 1px solid #555; color: #fff;">
+                        </div>
+                        <div>
+                            <label style="color: #ccc; font-size: 13px;">a₂ (quadratic):</label>
+                            <input type="number" id="vel2pwm_a2" step="0.0001" value="0" style="width: 100%; padding: 5px; background: #2a2a2a; border: 1px solid #555; color: #fff;">
+                        </div>
+                        <div>
+                            <label style="color: #ccc; font-size: 13px;">a₃ (cubic):</label>
+                            <input type="number" id="vel2pwm_a3" step="0.0001" value="0" style="width: 100%; padding: 5px; background: #2a2a2a; border: 1px solid #555; color: #fff;">
+                        </div>
+                    </div>
+                    <button class="button" onclick="sendVel2PWMPolynomial()" style="margin-top: 10px; width: 100%;">
+                        Upload to Robot
+                    </button>
+                </div>
+                
+                <!-- PWM to Velocity Polynomial (for reference/diagnostics) -->
+                <div style="flex: 1; border: 1px solid #555; padding: 15px; border-radius: 5px;">
+                    <h3 style="color: #4CAF50; margin-bottom: 10px;">PWM → Velocity (Forward Model)</h3>
+                    <p style="color: #888; font-size: 12px; margin-bottom: 10px;">
+                        Polynomial: v = b₀ + b₁·PWM + b₂·PWM² + b₃·PWM³
+                    </p>
+                    <div style="display: grid; gap: 8px;">
+                        <div>
+                            <label style="color: #ccc; font-size: 13px;">b₀ (constant):</label>
+                            <input type="number" id="pwm2vel_b0" step="0.0001" value="0" style="width: 100%; padding: 5px; background: #2a2a2a; border: 1px solid #555; color: #fff;">
+                        </div>
+                        <div>
+                            <label style="color: #ccc; font-size: 13px;">b₁ (linear):</label>
+                            <input type="number" id="pwm2vel_b1" step="0.0001" value="0" style="width: 100%; padding: 5px; background: #2a2a2a; border: 1px solid #555; color: #fff;">
+                        </div>
+                        <div>
+                            <label style="color: #ccc; font-size: 13px;">b₂ (quadratic):</label>
+                            <input type="number" id="pwm2vel_b2" step="0.0001" value="0" style="width: 100%; padding: 5px; background: #2a2a2a; border: 1px solid #555; color: #fff;">
+                        </div>
+                        <div>
+                            <label style="color: #ccc; font-size: 13px;">b₃ (cubic):</label>
+                            <input type="number" id="pwm2vel_b3" step="0.0001" value="0" style="width: 100%; padding: 5px; background: #2a2a2a; border: 1px solid #555; color: #fff;">
+                        </div>
+                    </div>
+                    <button class="button" onclick="sendPWM2VelPolynomial()" style="margin-top: 10px; width: 100%;">
+                        Upload to Robot
+                    </button>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; align-items: center; margin-top: 15px;">
+                <label style="color: #ccc;">
+                    <input type="checkbox" id="polyEnable" onchange="togglePolynomialMapping()">
+                    <strong>Enable Polynomial Mapping</strong> (disable to use legacy linear feedforward)
+                </label>
+            </div>
+            
+            <div class="status" id="polyStatus">
+                Polynomial mapping disabled - using linear feedforward
+            </div>
+        </div>
+        
+        <!-- Automatic Voltage Sweep Calibration -->
+        <div class="control-panel">
+            <h2>Automatic Voltage Sweep Calibration</h2>
+            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Automatically sweep through PWM values to characterize motor response</p>
+            <h3 style="color: #ccc; margin-top: 15px;">Configuration</h3>
+            <div class="config">
+                <div class="config-item">
+                    <label>Start PWM:</label>
+                    <input type="number" id="startPWM" value="0" min="0" max="255">
+                </div>
+                <div class="config-item">
+                    <label>End PWM:</label>
+                    <input type="number" id="endPWM" value="255" min="0" max="255">
+                </div>
+                <div class="config-item">
+                    <label>Step Size:</label>
+                    <input type="number" id="stepSize" value="5" min="1" max="50">
+                </div>
+                <div class="config-item">
+                    <label>Hold Time (ms):</label>
+                    <input type="number" id="holdTime" value="2000" min="500" max="10000">
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="button" id="startLeft" onclick="startCalibration('left')">Start Left Motor</button>
+                <button class="button" id="startRight" onclick="startCalibration('right')">Start Right Motor</button>
+                <button class="button" id="startBoth" onclick="startCalibration('both')">Start Both Motors</button>
+                <button class="button stop" id="stopBtn" onclick="stopCalibration()" disabled>Stop</button>
+            </div>
+            
+            <div class="status" id="status">
+                Status: Ready
+            </div>
+        </div>
+        
+        <!-- PID Autotuner -->
+        <div class="control-panel">
+            <h2>PID Autotuner (Step Response)</h2>
+            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Automatically tune PID gains using step response analysis</p>
+            
+            <details style="margin-bottom: 15px; padding: 10px; background: #333; border-radius: 5px;">
+                <summary style="cursor: pointer; color: #4CAF50; font-weight: bold;">📖 How It Works</summary>
+                <div style="margin-top: 10px; font-size: 13px; color: #ccc; line-height: 1.6;">
+                    <strong style="color: #ff9800;">Step Response Method:</strong><br>
+                    1. Starts at 0 velocity, then commands a step to target velocity<br>
+                    2. Measures response characteristics with feedforward only (no PID)<br>
+                    3. Analyzes: rise time, overshoot, settling time, steady-state error<br>
+                    4. Calculates PID gains based on Cohen-Coon method:<br>
+                    &nbsp;&nbsp;• Kp based on steady-state error (tighter tracking)<br>
+                    &nbsp;&nbsp;• Ki to eliminate steady-state error<br>
+                    &nbsp;&nbsp;• Kd to reduce overshoot and improve response<br><br>
+                    
+                    <strong style="color: #ff9800;">Advantages:</strong><br>
+                    • Fast: Only 5-8 seconds per test<br>
+                    • Works with existing feedforward controller<br>
+                    • Robot stays in one place (minimal movement)<br>
+                    • Gives conservative, stable gains<br><br>
+                    
+                    <strong style="color: #ff9800;">Prerequisites:</strong><br>
+                    • Feedforward gain and deadzone must be tuned first<br>
+                    • PID should be disabled during test
+                </div>
+            </details>
+            
+            <div class="config">
+                <div class="config-item">
+                    <label>Target Velocity (cm/s):</label>
+                    <input type="number" id="autotune-velocity" value="20" min="10" max="50" step="5">
+                </div>
+                <div class="config-item">
+                    <label>Test Duration (seconds):</label>
+                    <input type="number" id="test-duration" value="5" min="3" max="10" step="1">
+                </div>
+                <div class="config-item">
+                    <label>Aggressiveness (0.5-2.0):</label>
+                    <input type="number" id="tune-aggressiveness" value="1.0" min="0.5" max="2.0" step="0.1">
+                    <small style="display: block; color: #888; font-size: 11px; margin-top: 3px;">0.5=conservative, 1.0=balanced, 2.0=aggressive</small>
+                </div>
+                <div class="config-item">
+                    <label>Motor to Tune:</label>
+                    <select id="autotune-motor" style="width: 100%; padding: 8px; background: #333; border: 1px solid #555; border-radius: 4px; color: #fff;">
+                        <option value="left">Left Motor</option>
+                        <option value="right">Right Motor</option>
+                        <option value="both">Both Motors</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <button class="button" id="startAutotune" onclick="startPIDAutotune()">Start Autotuning</button>
+                <button class="button stop" id="stopAutotune" onclick="stopPIDAutotune()" disabled>Stop Autotuning</button>
+            </div>
+            
+            <div class="status" id="autotuneStatus">
+                Status: Ready to autotune
+            </div>
+            
+            <div id="autotuneResults" style="background: #333; padding: 15px; border-radius: 5px; margin-top: 15px; display: none;">
+                <h3 style="color: #4CAF50; margin-top: 0;">Autotuned PID Gains</h3>
+                <div id="autotuneResultsContent" style="font-family: monospace; font-size: 13px; line-height: 1.8;"></div>
+                <button class="button" onclick="applyAutotuneGains()" style="margin-top: 10px;">Apply Gains</button>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h2>PWM vs Velocity (Voltage Sweep)</h2>
+            <canvas id="chart" width="800" height="400"></canvas>
+        </div>
+
+        <div class="control-panel">
+            <h2>PID Velocity Tuning</h2>
+            <div class="config">
+                <div class="config-item">
+                    <label>Kp (Proportional):</label>
+                    <input type="number" id="pidKp" value="1.0" step="0.1" min="0">
+                </div>
+                <div class="config-item">
+                    <label>Ki (Integral):</label>
+                    <input type="number" id="pidKi" value="0.0" step="0.01" min="0">
+                </div>
+                <div class="config-item">
+                    <label>Kd (Derivative):</label>
+                    <input type="number" id="pidKd" value="0.0" step="0.01" min="0">
+                </div>
+                <div class="config-item">
+                    <label>Target Velocity (cm/s):</label>
+                    <input type="number" id="targetVel" value="20" step="1">
+                </div>
+            </div>
+            
+            <div style="margin-top: 20px;">
+                <button class="button" onclick="updatePIDGains()">Update PID Gains</button>
+                <button class="button" onclick="togglePID()" id="pidToggle">Enable PID</button>
+                <button class="button" onclick="setTargetVelocity()">Set Velocity</button>
+                <button class="button stop" onclick="stopMotors()">Stop Motors</button>
+            </div>
+            
+            <div class="status" id="pidStatus">
+                PID Status: Disabled | Left Error: 0.0 cm/s | Right Error: 0.0 cm/s
+            </div>
+        </div>
+
+        <div class="data-table">
+            <h2>Calibration Data</h2>
+            <div class="export-buttons">
+                <button class="button" onclick="exportCSV()">Export CSV</button>
+                <button class="button" onclick="exportJSON()">Export JSON</button>
+                <button class="button" onclick="calculateModel()">Calculate Model</button>
+            </div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>PWM</th>
+                        <th>Left Velocity (cm/s)</th>
+                        <th>Right Velocity (cm/s)</th>
+                    </tr>
+                </thead>
+                <tbody id="dataTable">
+                    <!-- Data rows will be inserted here -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="/js/common.js"></script>
+    <script src="/js/calibration.js"></script>
+    <script>
+        let ws = null;
+        let calibrationRunning = false;
+        let currentMotor = null;
+        let calibrationData = [];
+        let canvas = document.getElementById('chart');
+        let ctx = canvas.getContext('2d');
+        
+        // PID Autotuner state
+        let autotuneRunning = false;
+        let autotuneTimeout = null;
+        let autotuneData = {
+            startTime: 0,
+            targetVel: 0,
+            motor: 'left',
+            duration: 5000,
+            aggressiveness: 1.0,
+            samples: [],
+            steadyStateReached: false,
+            maxVel: 0,
+            riseTime: 0,
+            settlingTime: 0,
+            overshoot: 0,
+            steadyStateError: 0,
+            kp: 0,
+            ki: 0,
+            kd: 0
+        };
+
+        // Connect to WebSocket
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.hostname}/ws`);
+            
+            ws.onopen = () => {
+                console.log('WebSocket Connected');
+                updateStatus('Connected to robot');
+            };
+            
+            ws.onmessage = (event) => {
+                const data = event.data;
+                
+                // Try to parse as JSON first
+                try {
+                    const json = JSON.parse(data);
+                    
+                    // Handle encoder data in JSON format
+                    if (json.left && json.right) {
+                        const leftVel = parseFloat(json.left.velocity);
+                        const rightVel = parseFloat(json.right.velocity);
+
+                        // Capture motor PWM values (if present) for saturation checks
+                        const motorLeftPWM = json.motorLeft !== undefined ? parseFloat(json.motorLeft) : null;
+                        const motorRightPWM = json.motorRight !== undefined ? parseFloat(json.motorRight) : null;
+
+                        if (calibrationRunning) {
+                            updateCurrentData(leftVel, rightVel);
+                        }
+
+                        if (autotuneRunning) {
+                            // store last seen PWM on autotune state for sanity checks
+                            if (motorLeftPWM !== null && motorRightPWM !== null) {
+                                autotuneData.lastLeftPWM = motorLeftPWM;
+                                autotuneData.lastRightPWM = motorRightPWM;
+                                autotuneData.lastAbsPWM = (Math.abs(motorLeftPWM) + Math.abs(motorRightPWM)) / 2.0;
+                            }
+                            processAutotuneData(leftVel, rightVel);
+                        }
+                    }
+                } catch (e) {
+                    // Not JSON, try string commands
+                    if (data.startsWith('VEL_ERROR:')) {
+                        const parts = data.substring(10).split(',');
+                        const leftError = parseFloat(parts[0]);
+                        const rightError = parseFloat(parts[1]);
+                        const pidEnabled = parts[2] === 'true';
+
+                        document.getElementById('pidStatus').textContent = 
+                            `PID Status: ${pidEnabled ? 'Enabled' : 'Disabled'} | ` +
+                            `Left Error: ${leftError.toFixed(2)} cm/s | Right Error: ${rightError.toFixed(2)} cm/s`;
+
+                        document.getElementById('velocityStatus').textContent = 
+                            `Velocity Tracking - Left Error: ${leftError.toFixed(1)} cm/s | Right Error: ${rightError.toFixed(1)} cm/s`;
+                    } else if (data.startsWith('COMMAND_ACK:')) {
+                        // Example: COMMAND_ACK:VELOCITY:20.0
+                        const parts = data.split(':');
+                        if (parts.length >= 3 && parts[1] === 'VELOCITY') {
+                            const ackVel = parseFloat(parts[2]);
+                            console.log('Server ACKed VELOCITY command:', ackVel);
+                            updateAutotuneStatus(`Server ACKed velocity ${ackVel.toFixed(1)} cm/s`);
+                        }
+                    }
+                }
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket Disconnected');
+                updateStatus('Disconnected - Retrying...');
+                setTimeout(connectWebSocket, 1000);
+            };
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = 'Status: ' + message;
+        }
+        
+        // Direct Motor Control Functions
+        function setMotorPowers() {
+            const leftPower = parseFloat(document.getElementById('left-motor-input').value);
+            const rightPower = parseFloat(document.getElementById('right-motor-input').value);
+            
+            if (isNaN(leftPower) || isNaN(rightPower)) {
+                alert('Please enter valid numbers for both motors');
+                return;
+            }
+            
+            const clampedLeft = Math.max(-1, Math.min(1, leftPower));
+            const clampedRight = Math.max(-1, Math.min(1, rightPower));
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('MOTORS:' + clampedLeft.toFixed(2) + ',' + clampedRight.toFixed(2));
+                console.log('Set motors - Left:', clampedLeft, 'Right:', clampedRight);
+            }
+        }
+        
+        function stopMotors() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('MOTORS:0,0');
+                ws.send('VELOCITY:0');
+            }
+            document.getElementById('left-motor-input').value = 0;
+            document.getElementById('right-motor-input').value = 0;
+        }
+        
+        // Manual Velocity Feedforward Tuning Functions
+        function updateFFGainDisplay() {
+            const value = document.getElementById('ff-gain-slider').value;
+            document.getElementById('ff-gain-value').textContent = parseFloat(value).toFixed(1);
+        }
+        
+        function updateDeadzoneDisplay() {
+            const value = document.getElementById('deadzone-slider').value;
+            document.getElementById('deadzone-value').textContent = value;
+        }
+        
+        function setFFGain() {
+            const gain = parseFloat(document.getElementById('ff-gain-slider').value);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('FF_GAIN:' + gain.toFixed(2));
+                console.log('Set FF gain:', gain);
+            }
+        }
+        
+        function zeroGain() {
+            document.getElementById('ff-gain-slider').value = 0;
+            updateFFGainDisplay();
+            setFFGain();
+        }
+        
+        function setDeadzone() {
+            const deadzone = parseInt(document.getElementById('deadzone-slider').value);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('DEADZONE:' + deadzone);
+                console.log('Set deadzone:', deadzone);
+            }
+        }
+        
+        function setVelocity() {
+            const velocity = parseFloat(document.getElementById('velocity-input').value);
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('VELOCITY:' + velocity.toFixed(1));
+                console.log('Set velocity:', velocity);
+            }
+        }
+        
+        function stopVelocity() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('VELOCITY:0');
+            }
+            document.getElementById('velocity-input').value = 0;
+        }
+        
+        // Polynomial Mapping Functions
+        function sendVel2PWMPolynomial() {
+            const a0 = parseFloat(document.getElementById('vel2pwm_a0').value) || 0;
+            const a1 = parseFloat(document.getElementById('vel2pwm_a1').value) || 0;
+            const a2 = parseFloat(document.getElementById('vel2pwm_a2').value) || 0;
+            const a3 = parseFloat(document.getElementById('vel2pwm_a3').value) || 0;
+            
+            // Format: POLY_VEL2PWM:degree,a0,a1,a2,a3
+            const message = `POLY_VEL2PWM:3,${a0},${a1},${a2},${a3}`;
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(message);
+                console.log('Sent velocity->PWM polynomial:', {a0, a1, a2, a3});
+                document.getElementById('polyStatus').textContent = 
+                    `Velocity→PWM polynomial updated: a₀=${a0.toFixed(4)}, a₁=${a1.toFixed(4)}, a₂=${a2.toFixed(6)}, a₃=${a3.toFixed(8)}`;
+            } else {
+                alert('WebSocket not connected!');
+            }
+        }
+        
+        function sendPWM2VelPolynomial() {
+            const b0 = parseFloat(document.getElementById('pwm2vel_b0').value) || 0;
+            const b1 = parseFloat(document.getElementById('pwm2vel_b1').value) || 0;
+            const b2 = parseFloat(document.getElementById('pwm2vel_b2').value) || 0;
+            const b3 = parseFloat(document.getElementById('pwm2vel_b3').value) || 0;
+            
+            // Format: POLY_PWM2VEL:degree,b0,b1,b2,b3
+            const message = `POLY_PWM2VEL:3,${b0},${b1},${b2},${b3}`;
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(message);
+                console.log('Sent PWM->velocity polynomial:', {b0, b1, b2, b3});
+                document.getElementById('polyStatus').textContent = 
+                    `PWM→Velocity polynomial updated: b₀=${b0.toFixed(4)}, b₁=${b1.toFixed(4)}, b₂=${b2.toFixed(6)}, b₃=${b3.toFixed(8)}`;
+            } else {
+                alert('WebSocket not connected!');
+            }
+        }
+        
+        function togglePolynomialMapping() {
+            const enabled = document.getElementById('polyEnable').checked;
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('POLY_ENABLE:' + (enabled ? 'true' : 'false'));
+                console.log('Polynomial mapping:', enabled ? 'enabled' : 'disabled');
+                document.getElementById('polyStatus').textContent = enabled ? 
+                    '✓ Polynomial mapping ENABLED - using cubic regression' : 
+                    '✗ Polynomial mapping disabled - using linear feedforward';
+            } else {
+                alert('WebSocket not connected!');
+            }
+        }
+        
+        // PID Autotuner Functions
+        function startPIDAutotune() {
+            const targetVel = parseFloat(document.getElementById('autotune-velocity').value);
+            const duration = parseFloat(document.getElementById('test-duration').value) * 1000; // Convert to ms
+            const motor = document.getElementById('autotune-motor').value;
+            const aggressiveness = parseFloat(document.getElementById('tune-aggressiveness').value);
+            
+            // Clear any existing timeout
+            if (autotuneTimeout) {
+                clearTimeout(autotuneTimeout);
+            }
+            
+            // Reset autotune state
+            autotuneData = {
+                startTime: Date.now(),
+                targetVel: targetVel,
+                motor: motor,
+                duration: duration,
+                aggressiveness: aggressiveness,
+                samples: [],
+                steadyStateReached: false,
+                maxVel: 0,
+                riseTime: 0,
+                settlingTime: 0,
+                overshoot: 0,
+                steadyStateError: 0,
+                kp: 0,
+                ki: 0,
+                kd: 0
+            };
+            
+            autotuneRunning = true;
+            document.getElementById('startAutotune').disabled = true;
+            document.getElementById('stopAutotune').disabled = false;
+            document.getElementById('autotuneResults').style.display = 'none';
+            updateAutotuneStatus('Starting at 0 velocity...');
+            
+            // Make sure PID is disabled for clean step response
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('PID_ENABLE:false');
+                // Start at zero
+                ws.send('VELOCITY:0');
+            }
+            
+            // After 500ms, apply step input and start timeout
+            setTimeout(() => {
+                if (autotuneRunning && ws && ws.readyState === WebSocket.OPEN) {
+                    autotuneData.startTime = Date.now(); // Reset start time
+                    ws.send('VELOCITY:' + targetVel.toFixed(1));
+                    updateAutotuneStatus('Step applied! Measuring response...');
+                    
+                    // Set timeout to force completion after duration + 500ms buffer
+                    autotuneTimeout = setTimeout(() => {
+                        if (autotuneRunning) {
+                            console.log('Autotune timeout reached, calculating gains...');
+                            calculatePIDGains();
+                            stopPIDAutotune();
+                        }
+                    }, duration + 500);
+                }
+            }, 500);
+            
+            console.log('Started PID autotuning (step response):', autotuneData);
+        }
+        
+        function stopPIDAutotune() {
+            autotuneRunning = false;
+            document.getElementById('startAutotune').disabled = false;
+            document.getElementById('stopAutotune').disabled = true;
+            
+            // Clear timeout
+            if (autotuneTimeout) {
+                clearTimeout(autotuneTimeout);
+                autotuneTimeout = null;
+            }
+            
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send('VELOCITY:0');
+            }
+            
+            updateAutotuneStatus('Autotuning stopped');
+        }
+        
+        function updateAutotuneStatus(message) {
+            document.getElementById('autotuneStatus').textContent = 'Status: ' + message;
+        }
+        
+        function processAutotuneData(leftVel, rightVel) {
+            if (!autotuneRunning) return;
+            
+            const now = Date.now();
+            const elapsed = now - autotuneData.startTime;
+            
+            // Get velocity for selected motor
+            const velocity = autotuneData.motor === 'left' ? leftVel : 
+                            autotuneData.motor === 'right' ? rightVel : 
+                            (leftVel + rightVel) / 2;
+
+            // Sanity check: if motor PWM is saturated (near 255) the response will be useless
+            if (autotuneData.lastAbsPWM !== undefined && autotuneData.lastAbsPWM !== null) {
+                // lastAbsPWM is in 0..255
+                if (Math.abs(autotuneData.lastAbsPWM) >= 245) {
+                    // Stop autotune and warn the user
+                    updateAutotuneStatus('✗ Aborting: motor PWM saturated during test');
+                    alert('Autotune aborted: motor output saturated. Lower the target velocity or retune feedforward/deadzone first.');
+                    stopPIDAutotune();
+                    return;
+                }
+            }
+            
+            // Store sample
+            autotuneData.samples.push({ 
+                time: elapsed, 
+                velocity: velocity 
+            });
+            
+            // Log first few samples for debugging
+            if (autotuneData.samples.length <= 3) {
+                console.log(`Sample ${autotuneData.samples.length}: t=${elapsed}ms, v=${velocity.toFixed(1)} cm/s`);
+            }
+            
+            // Update max velocity
+            if (velocity > autotuneData.maxVel) {
+                autotuneData.maxVel = velocity;
+            }
+            
+            // Update status (include PWM if available)
+            const progress = Math.min(100, (elapsed / autotuneData.duration) * 100);
+            let statusText = `Measuring response... ${progress.toFixed(0)}% (${velocity.toFixed(1)} cm/s) - ${autotuneData.samples.length} samples`;
+            if (autotuneData.lastAbsPWM !== undefined && autotuneData.lastAbsPWM !== null) {
+                statusText += ` | Motor PWM ≈ ${autotuneData.lastAbsPWM.toFixed(0)}`;
+            }
+            updateAutotuneStatus(statusText);
+            
+            // Check if test duration completed
+            if (elapsed >= autotuneData.duration) {
+                console.log('Duration reached, calling calculatePIDGains...');
+                calculatePIDGains();
+                stopPIDAutotune();
+            }
+        }
+        
+        function calculatePIDGains() {
+            console.log('calculatePIDGains called with', autotuneData.samples.length, 'samples');
+            
+            if (autotuneData.samples.length < 10) {
+                updateAutotuneStatus('Not enough data collected - only ' + autotuneData.samples.length + ' samples');
+                alert('Not enough data collected. Only got ' + autotuneData.samples.length + ' samples. Make sure encoder data is being received.');
+                return;
+            }
+            
+            const target = autotuneData.targetVel;
+            const samples = autotuneData.samples;
+            
+            // Find rise time (time to reach 90% of target)
+            const ninetyPercent = target * 0.9;
+            let riseIdx = samples.findIndex(s => s.velocity >= ninetyPercent);
+            if (riseIdx === -1) riseIdx = samples.length - 1;
+            autotuneData.riseTime = samples[riseIdx].time / 1000; // Convert to seconds
+            
+            // Find peak overshoot
+            autotuneData.overshoot = ((autotuneData.maxVel - target) / target) * 100;
+            
+            // Calculate steady-state values (last 20% of samples)
+            const steadyStartIdx = Math.floor(samples.length * 0.8);
+            const steadySamples = samples.slice(steadyStartIdx);
+            const steadyStateVel = steadySamples.reduce((sum, s) => sum + s.velocity, 0) / steadySamples.length;
+            autotuneData.steadyStateError = target - steadyStateVel;
+            
+            // Find settling time (time to stay within 5% of target)
+            const fivePercent = target * 0.05;
+            let settledIdx = samples.length - 1;
+            for (let i = riseIdx; i < samples.length; i++) {
+                const inBand = Math.abs(samples[i].velocity - target) < fivePercent;
+                if (inBand && i < samples.length - 10) {
+                    // Check if it stays in band for at least 10 samples
+                    let staysInBand = true;
+                    for (let j = i; j < Math.min(i + 10, samples.length); j++) {
+                        if (Math.abs(samples[j].velocity - target) >= fivePercent) {
+                            staysInBand = false;
+                            break;
+                        }
+                    }
+                    if (staysInBand) {
+                        settledIdx = i;
+                        break;
+                    }
+                }
+            }
+            autotuneData.settlingTime = samples[settledIdx].time / 1000; // Convert to seconds
+            
+            // Calculate PID gains using Cohen-Coon-inspired method
+            // Based on rise time, overshoot, and steady-state error
+            const Tr = autotuneData.riseTime;
+            const Ts = autotuneData.settlingTime;
+            const SSE = Math.abs(autotuneData.steadyStateError);
+            const aggressiveness = autotuneData.aggressiveness;
+            
+            // Kp: Higher if there's steady-state error, moderate rise time
+            // Base Kp on error magnitude - more error needs more gain
+            const baseKp = SSE > 5 ? 0.8 : SSE > 2 ? 0.5 : 0.3;
+            autotuneData.kp = (baseKp / Math.max(Tr, 0.1)) * aggressiveness;
+            
+            // Ki: Eliminate steady-state error, but not too aggressive
+            // Integral time constant should be related to settling time
+            autotuneData.ki = (autotuneData.kp / Math.max(Ts * 2, 0.5)) * aggressiveness;
+            
+            // Kd: Reduce overshoot and improve response
+            // More Kd if there's overshoot
+            const kdFactor = autotuneData.overshoot > 10 ? 0.15 : 
+                           autotuneData.overshoot > 5 ? 0.10 : 0.05;
+            autotuneData.kd = (autotuneData.kp * Tr * kdFactor) * aggressiveness;
+            
+            // Clamp values to reasonable ranges
+            autotuneData.kp = Math.max(0.1, Math.min(5.0, autotuneData.kp));
+            autotuneData.ki = Math.max(0.01, Math.min(2.0, autotuneData.ki));
+            autotuneData.kd = Math.max(0.0, Math.min(0.5, autotuneData.kd));
+            
+            // Display results
+            const resultsDiv = document.getElementById('autotuneResults');
+            const resultsContent = document.getElementById('autotuneResultsContent');
+            
+            const aggrValue = autotuneData.aggressiveness;
+            const aggrText = aggrValue < 0.8 ? 'conservative' : aggrValue > 1.5 ? 'aggressive' : 'balanced';
+            
+            resultsContent.innerHTML = `
+                <strong style="font-size: 14px;">Step Response Characteristics:</strong><br>
+                Target Velocity: ${target.toFixed(1)} cm/s<br>
+                Peak Velocity: ${autotuneData.maxVel.toFixed(1)} cm/s<br>
+                Steady-State Velocity: ${steadyStateVel.toFixed(1)} cm/s<br>
+                Rise Time (0-90%): ${(Tr * 1000).toFixed(0)} ms<br>
+                Settling Time (±5%): ${(Ts * 1000).toFixed(0)} ms<br>
+                Overshoot: ${autotuneData.overshoot.toFixed(1)}%<br>
+                Steady-State Error: ${autotuneData.steadyStateError.toFixed(1)} cm/s<br>
+                <br>
+                <strong style="font-size: 14px; color: #4CAF50;">Calculated PID Gains:</strong><br>
+                <span style="font-size: 15px; color: #fff;">
+                Kp (Proportional): <strong>${autotuneData.kp.toFixed(3)}</strong><br>
+                Ki (Integral): <strong>${autotuneData.ki.toFixed(3)}</strong><br>
+                Kd (Derivative): <strong>${autotuneData.kd.toFixed(3)}</strong><br>
+                </span>
+                <br>
+                <em style="color: #4CAF50;">✓ Gains tuned for ${aggrText} response</em><br>
+                <em style="color: #888;">Tip: If response is too oscillatory, reduce aggressiveness and re-run</em>
+            `;
+            
+            // Force display the results
+            resultsDiv.style.display = 'block';
+            resultsDiv.style.visibility = 'visible';
+            updateAutotuneStatus('✓ Autotuning complete! Results shown below.');
+            
+            console.log('Results div displayed, style:', resultsDiv.style.display);
+            console.log('Autotuned PID gains:', autotuneData);
+            console.log(`Collected ${autotuneData.samples.length} samples over ${(autotuneData.duration/1000).toFixed(1)}s`);
+            
+            // Scroll results into view after a small delay to ensure rendering
+            setTimeout(() => {
+                resultsDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+        
+        function applyAutotuneGains() {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(`PID_GAINS:${autotuneData.kp.toFixed(3)},${autotuneData.ki.toFixed(3)},${autotuneData.kd.toFixed(3)}`);
+                
+                // Update the PID tuning section inputs
+                document.getElementById('pidKp').value = autotuneData.kp.toFixed(3);
+                document.getElementById('pidKi').value = autotuneData.ki.toFixed(3);
+                document.getElementById('pidKd').value = autotuneData.kd.toFixed(3);
+                
+                alert('PID gains applied! You can now enable PID and test.');
+            }
+        }
+
+        function startCalibration(motor) {
+            if (calibrationRunning) return;
+            
+            const startPWM = parseInt(document.getElementById('startPWM').value);
+            const endPWM = parseInt(document.getElementById('endPWM').value);
+            const stepSize = parseInt(document.getElementById('stepSize').value);
+            const holdTime = parseInt(document.getElementById('holdTime').value);
+            
+            calibrationRunning = true;
+            currentMotor = motor;
+            calibrationData = [];
+            
+            // Disable start buttons, enable stop
+            document.getElementById('startLeft').disabled = true;
+            document.getElementById('startRight').disabled = true;
+            document.getElementById('startBoth').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            
+            // Clear chart and table
+            clearChart();
+            clearTable();
+            
+            updateStatus(`Starting ${motor} motor calibration...`);
+            
+            // Send start command
+            ws.send(`START_CALIBRATION:${motor},${startPWM},${endPWM},${stepSize},${holdTime}`);
+        }
+
+        function stopCalibration() {
+            calibrationRunning = false;
+            currentMotor = null;
+            
+            ws.send('STOP_CALIBRATION');
+            
+            document.getElementById('startLeft').disabled = false;
+            document.getElementById('startRight').disabled = false;
+            document.getElementById('startBoth').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            
+            updateStatus('Calibration stopped');
+        }
+
+        function updateCurrentData(leftVel, rightVel) {
+            // This will be updated with PWM value from the controller
+            // For now, data is accumulated when we receive CALIBRATION_POINT message
+        }
+
+        function addDataPoint(pwm, leftVel, rightVel) {
+            calibrationData.push({pwm, leftVel, rightVel});
+            
+            // Add to table
+            const table = document.getElementById('dataTable');
+            const row = table.insertRow();
+            row.insertCell(0).textContent = pwm;
+            row.insertCell(1).textContent = leftVel.toFixed(2);
+            row.insertCell(2).textContent = rightVel.toFixed(2);
+            
+            // Update chart
+            drawChart();
+        }
+
+        function clearChart() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawGrid();
+        }
+
+        function clearTable() {
+            document.getElementById('dataTable').innerHTML = '';
+        }
+
+        function drawGrid() {
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 1;
+            
+            // Vertical lines
+            for (let i = 0; i <= 10; i++) {
+                const x = (canvas.width / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Horizontal lines
+            for (let i = 0; i <= 10; i++) {
+                const y = (canvas.height / 10) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+        }
+
+        function drawChart() {
+            clearChart();
+            
+            if (calibrationData.length === 0) return;
+            
+            const maxPWM = 255;
+            const maxVel = Math.max(...calibrationData.map(d => Math.max(d.leftVel, d.rightVel))) * 1.1;
+            
+            // Draw left motor data (blue)
+            ctx.strokeStyle = '#2196F3';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            calibrationData.forEach((point, i) => {
+                const x = (point.pwm / maxPWM) * canvas.width;
+                const y = canvas.height - (point.leftVel / maxVel) * canvas.height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            
+            // Draw right motor data (red)
+            ctx.strokeStyle = '#f44336';
+            ctx.beginPath();
+            calibrationData.forEach((point, i) => {
+                const x = (point.pwm / maxPWM) * canvas.width;
+                const y = canvas.height - (point.rightVel / maxVel) * canvas.height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            });
+            ctx.stroke();
+            
+            // Draw points
+            calibrationData.forEach(point => {
+                const x = (point.pwm / maxPWM) * canvas.width;
+                const yLeft = canvas.height - (point.leftVel / maxVel) * canvas.height;
+                const yRight = canvas.height - (point.rightVel / maxVel) * canvas.height;
+                
+                ctx.fillStyle = '#2196F3';
+                ctx.fillRect(x - 3, yLeft - 3, 6, 6);
+                
+                ctx.fillStyle = '#f44336';
+                ctx.fillRect(x - 3, yRight - 3, 6, 6);
+            });
+            
+            // Draw legend
+            ctx.fillStyle = '#2196F3';
+            ctx.fillRect(10, 10, 20, 10);
+            ctx.fillStyle = '#fff';
+            ctx.fillText('Left Motor', 35, 20);
+            
+            ctx.fillStyle = '#f44336';
+            ctx.fillRect(10, 30, 20, 10);
+            ctx.fillStyle = '#fff';
+            ctx.fillText('Right Motor', 35, 40);
+        }
+
+        function exportCSV() {
+            let csv = 'PWM,Left Velocity (cm/s),Right Velocity (cm/s)\n';
+            calibrationData.forEach(point => {
+                csv += `${point.pwm},${point.leftVel},${point.rightVel}\n`;
+            });
+            
+            const blob = new Blob([csv], {type: 'text/csv'});
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'motor_calibration.csv';
+            a.click();
+        }
+
+        function exportJSON() {
+            const json = JSON.stringify(calibrationData, null, 2);
+            const blob = new Blob([json], {type: 'application/json'});
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'motor_calibration.json';
+            a.click();
+        }
+
+        function calculateModel() {
+            if (calibrationData.length < 2) {
+                alert('Need at least 2 data points');
+                return;
+            }
+            
+            // Find deadzone (first PWM where velocity > 0)
+            let leftDeadzone = 0;
+            let rightDeadzone = 0;
+            
+            for (let point of calibrationData) {
+                if (leftDeadzone === 0 && Math.abs(point.leftVel) > 1.0) {
+                    leftDeadzone = point.pwm;
+                }
+                if (rightDeadzone === 0 && Math.abs(point.rightVel) > 1.0) {
+                    rightDeadzone = point.pwm;
+                }
+            }
+            
+            // Linear regression for points above deadzone
+            const leftPoints = calibrationData.filter(p => p.pwm >= leftDeadzone && Math.abs(p.leftVel) > 1.0);
+            const rightPoints = calibrationData.filter(p => p.pwm >= rightDeadzone && Math.abs(p.rightVel) > 1.0);
+            
+            const leftGain = linearRegression(leftPoints.map(p => p.leftVel), leftPoints.map(p => p.pwm - leftDeadzone));
+            const rightGain = linearRegression(rightPoints.map(p => p.rightVel), rightPoints.map(p => p.pwm - rightDeadzone));
+            
+            const result = `
+Motor Calibration Results:
+==========================
+
+Left Motor:
+  Deadzone: ${leftDeadzone} PWM
+  Gain: ${leftGain.toFixed(3)} PWM per cm/s
+  Model: PWM = ${leftDeadzone} + ${leftGain.toFixed(3)} × velocity
+
+Right Motor:
+  Deadzone: ${rightDeadzone} PWM
+  Gain: ${rightGain.toFixed(3)} PWM per cm/s
+  Model: PWM = ${rightDeadzone} + ${rightGain.toFixed(3)} × velocity
+`;
+            
+            alert(result);
+            console.log(result);
+        }
+
+        function linearRegression(x, y) {
+            const n = x.length;
+            const sumX = x.reduce((a, b) => a + b, 0);
+            const sumY = y.reduce((a, b) => a + b, 0);
+            const sumXY = x.reduce((acc, xi, i) => acc + xi * y[i], 0);
+            const sumXX = x.reduce((acc, xi) => acc + xi * xi, 0);
+            
+            const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+            return slope;
+        }
+
+        // PID control functions
+        let pidEnabled = false;
+
+        function updatePIDGains() {
+            const kp = parseFloat(document.getElementById('pidKp').value);
+            const ki = parseFloat(document.getElementById('pidKi').value);
+            const kd = parseFloat(document.getElementById('pidKd').value);
+            
+            ws.send(`PID_GAINS:${kp},${ki},${kd}`);
+            console.log(`PID gains set: Kp=${kp}, Ki=${ki}, Kd=${kd}`);
+        }
+
+        function togglePID() {
+            pidEnabled = !pidEnabled;
+            ws.send(`PID_ENABLE:${pidEnabled}`);
+            document.getElementById('pidToggle').textContent = pidEnabled ? 'Disable PID' : 'Enable PID';
+            console.log(`PID ${pidEnabled ? 'enabled' : 'disabled'}`);
+        }
+
+        function setTargetVelocity() {
+            const vel = parseFloat(document.getElementById('targetVel').value);
+            ws.send(`VELOCITY:${vel}`);
+            console.log(`Target velocity set: ${vel} cm/s`);
+        }
+
+        function stopMotors() {
+            ws.send('VELOCITY:0');
+            console.log('Motors stopped');
+        }
+
+        // WebSocket message handler for calibration data
+        window.addEventListener('load', () => {
+            connectWebSocket();
+            drawGrid();
+            
+            // Initialize slider displays
+            updateFFGainDisplay();
+            updateDeadzoneDisplay();
+            
+            // Override onmessage to handle calibration-specific messages
+            const originalOnMessage = ws?.onmessage;
+            if (ws) {
+                ws.addEventListener('message', (event) => {
+                    const data = event.data;
+                    
+                    if (data.startsWith('CALIBRATION_POINT:')) {
+                        const parts = data.substring(18).split(',');
+                        const pwm = parseInt(parts[0]);
+                        const leftVel = parseFloat(parts[1]);
+                        const rightVel = parseFloat(parts[2]);
+                        addDataPoint(pwm, leftVel, rightVel);
+                    } else if (data.startsWith('CALIBRATION_COMPLETE')) {
+                        stopCalibration();
+                        updateStatus('Calibration complete!');
+                    } else if (data.startsWith('CALIBRATION_PROGRESS:')) {
+                        const progress = data.substring(21);
+                        updateStatus(`Calibrating... ${progress}`);
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>

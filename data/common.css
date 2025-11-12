@@ -1,0 +1,403 @@
+/* ================================================
+   ESP32 Robot Car - Common Base Styles
+   Shared across all pages for consistent design
+   ================================================ */
+
+/* ============ Color Palette ============ */
+:root {
+    --color-primary: #4CAF50;
+    --color-primary-hover: #45a049;
+    --color-primary-active: #3d8b40;
+    --color-danger: #f44336;
+    --color-danger-hover: #da190b;
+    --color-danger-active: #c41408;
+    --color-info: #2196F3;
+    
+    --bg-dark: #0a0a0a;
+    --bg-darker: #1a1a1a;
+    --bg-panel: #222;
+    --bg-secondary: #2a2a2a;
+    --bg-input: #333;
+    
+    --text-primary: #fff;
+    --text-secondary: #ccc;
+    --text-muted: #888;
+    --text-success: #4CAF50;
+    --text-error: #f44336;
+    
+    --border-color: #333;
+    --border-medium: #444;
+    --border-light: #555;
+}
+
+/* ============ Base Elements ============ */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: var(--bg-darker);
+    color: var(--text-primary);
+    padding: 0;
+    margin: 0;
+    line-height: 1.6;
+}
+
+/* ============ Typography ============ */
+h1 {
+    color: var(--color-primary);
+    text-align: center;
+    margin: 20px 0;
+    font-size: 32px;
+}
+
+h2 {
+    color: var(--color-primary);
+    margin: 15px 0 10px 0;
+    font-size: 24px;
+}
+
+h3 {
+    color: var(--text-secondary);
+    margin: 15px 0 10px 0;
+    font-size: 18px;
+}
+
+p {
+    margin: 10px 0;
+    color: var(--text-secondary);
+}
+
+/* ============ Buttons ============ */
+.button {
+    background: var(--color-primary);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin: 5px;
+    transition: background 0.2s, transform 0.1s;
+    font-weight: 500;
+}
+
+.button:hover {
+    background: var(--color-primary-hover);
+}
+
+.button:active {
+    background: var(--color-primary-active);
+    transform: scale(0.98);
+}
+
+.button:disabled {
+    background: #666;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.button.danger,
+.button.stop {
+    background: var(--color-danger);
+}
+
+.button.danger:hover,
+.button.stop:hover {
+    background: var(--color-danger-hover);
+}
+
+.button.danger:active,
+.button.stop:active {
+    background: var(--color-danger-active);
+}
+
+.button.secondary {
+    background: var(--bg-input);
+    color: var(--text-secondary);
+}
+
+.button.secondary:hover {
+    background: #444;
+}
+
+/* ============ Layout & Containers ============ */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.panel,
+.control-panel {
+    background: var(--bg-panel);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.panel-compact {
+    padding: 15px;
+}
+
+/* ============ Status Indicators ============ */
+.status {
+    background: var(--bg-input);
+    padding: 15px;
+    border-radius: 5px;
+    margin: 10px 0;
+    font-family: 'Courier New', monospace;
+}
+
+.connected {
+    color: var(--text-success);
+}
+
+.disconnected {
+    color: var(--text-error);
+}
+
+/* ============ Data Display ============ */
+.encoder-data,
+.data-display {
+    background: var(--bg-panel);
+    padding: 20px;
+    margin: 20px auto;
+    border-radius: 8px;
+    max-width: 500px;
+}
+
+.data-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.data-row:last-child {
+    border-bottom: none;
+}
+
+.data-label {
+    font-weight: bold;
+    color: var(--text-muted);
+}
+
+.data-value {
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+}
+
+/* ============ Tables ============ */
+.data-table {
+    background: var(--bg-panel);
+    padding: 20px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th,
+td {
+    padding: 10px;
+    text-align: center;
+    border: 1px solid var(--border-medium);
+}
+
+th {
+    background: var(--bg-input);
+    color: var(--color-primary);
+    font-weight: bold;
+}
+
+tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* ============ Forms & Inputs ============ */
+.config,
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.config-item,
+.form-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.config-item label,
+.form-item label {
+    display: block;
+    margin-bottom: 5px;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.config-item input,
+.config-item select,
+.form-item input,
+.form-item select,
+input[type="text"],
+input[type="number"],
+select {
+    width: 100%;
+    padding: 8px;
+    background: var(--bg-input);
+    border: 1px solid var(--border-light);
+    border-radius: 4px;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.config-item input:focus,
+.config-item select:focus,
+.form-item input:focus,
+.form-item select:focus,
+input:focus,
+select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
+}
+
+/* ============ Details/Accordion ============ */
+details {
+    margin-bottom: 15px;
+    padding: 10px;
+    background: var(--bg-input);
+    border-radius: 5px;
+}
+
+summary {
+    cursor: pointer;
+    color: var(--color-primary);
+    font-weight: bold;
+    user-select: none;
+    padding: 5px;
+}
+
+summary:hover {
+    color: #5BC461;
+}
+
+/* ============ Charts ============ */
+.chart-container {
+    background: var(--bg-panel);
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+canvas {
+    max-width: 100%;
+    background: var(--bg-secondary);
+}
+
+/* ============ Utility Classes ============ */
+.text-center {
+    text-align: center;
+}
+
+.text-left {
+    text-align: left;
+}
+
+.text-right {
+    text-align: right;
+}
+
+.text-success {
+    color: var(--text-success);
+}
+
+.text-error {
+    color: var(--text-error);
+}
+
+.text-muted {
+    color: var(--text-muted);
+}
+
+.font-mono {
+    font-family: 'Courier New', monospace;
+}
+
+.font-bold {
+    font-weight: bold;
+}
+
+/* Spacing utilities */
+.m-0 { margin: 0; }
+.mt-10 { margin-top: 10px; }
+.mt-15 { margin-top: 15px; }
+.mt-20 { margin-top: 20px; }
+.mb-10 { margin-bottom: 10px; }
+.mb-15 { margin-bottom: 15px; }
+.mb-20 { margin-bottom: 20px; }
+.p-10 { padding: 10px; }
+.p-15 { padding: 15px; }
+.p-20 { padding: 20px; }
+
+/* Display utilities */
+.flex {
+    display: flex;
+}
+
+.flex-center {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.flex-between {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.gap-10 {
+    gap: 10px;
+}
+
+.gap-15 {
+    gap: 15px;
+}
+
+.gap-20 {
+    gap: 20px;
+}
+
+/* ============ Responsive Design ============ */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    h1 {
+        font-size: 24px;
+    }
+    
+    h2 {
+        font-size: 20px;
+    }
+    
+    .button {
+        padding: 10px 20px;
+        font-size: 14px;
+    }
+    
+    .config,
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+}

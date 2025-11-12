@@ -1,0 +1,140 @@
+.console-container {
+    background: var(--bg-panel);
+    padding: 20px;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 400px;
+}
+
+.console-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+}
+
+.console-header h2 {
+    margin: 0;
+    font-size: 20px;
+}
+
+.console {
+    background: var(--bg-dark);
+    color: #0f0;
+    font-family: 'Courier New', monospace;
+    font-size: 12px;
+    padding: 15px;
+    border-radius: 4px;
+    overflow-y: auto;
+    border: 1px solid var(--border-color);
+    flex: 1;
+    line-height: 1.4;
+}
+
+.console::-webkit-scrollbar {
+    width: 8px;
+}
+
+.console::-webkit-scrollbar-track {
+    background: var(--bg-dark);
+}
+
+.console::-webkit-scrollbar-thumb {
+    background: var(--border-light);
+    border-radius: 4px;
+}
+
+.console::-webkit-scrollbar-thumb:hover {
+    background: #666;
+}
+
+.console .console-line {
+    margin-bottom: 2px;
+}
+
+.console .console-timestamp {
+    color: #888;
+    margin-right: 8px;
+}
+
+.console .console-error {
+    color: #f44336;
+}
+
+.console .console-warning {
+    color: #ff9800;
+}
+
+.console .console-info {
+    color: #2196F3;
+}
+
+.console .console-success {
+    color: #4CAF50;
+}
+
+/* Two-column layout for desktop */
+.main-layout {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin: 0 auto;
+    max-width: 1400px;
+    padding: 20px;
+}
+
+.main-content {
+    min-width: 0; /* Prevents grid blowout */
+}
+
+.console-sidebar {
+    min-width: 0;
+    position: relative;
+}
+
+/* Desktop: Two columns with console on right */
+@media (min-width: 1024px) {
+    .main-layout {
+        grid-template-columns: 1fr 500px;
+    }
+    
+    .console-container {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+    }
+    
+    .console {
+        max-height: calc(100vh - 200px);
+    }
+}
+
+/* Tablet: Keep single column but larger */
+@media (min-width: 768px) and (max-width: 1023px) {
+    .console-container {
+        min-height: 350px;
+    }
+}
+
+/* Mobile: Smaller console */
+@media (max-width: 767px) {
+    .main-layout {
+        padding: 10px;
+        gap: 15px;
+    }
+    
+    .console-container {
+        min-height: 300px;
+        padding: 15px;
+    }
+    
+    .console-header h2 {
+        font-size: 18px;
+    }
+    
+    .console {
+        font-size: 11px;
+    }
+}

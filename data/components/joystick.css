@@ -1,0 +1,88 @@
+#joystick {
+    width: 200px;
+    height: 200px;
+    border: 2px solid var(--border-light);
+    border-radius: 50%;
+    margin: 20px auto;
+    position: relative;
+    background: var(--bg-input);
+    touch-action: none;
+    transition: opacity 0.3s ease;
+}
+
+#joystick.disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+#stick {
+    width: 40px;
+    height: 40px;
+    background: var(--color-primary);
+    border-radius: 50%;
+    position: absolute;
+    top: 80px;
+    left: 80px;
+    transition: all 0.1s ease;
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.5);
+    pointer-events: none;
+}
+
+/* Control mode indicator */
+.control-mode {
+    text-align: center;
+    padding: 10px;
+    background: var(--bg-input);
+    border-radius: 5px;
+    margin: 15px 0;
+    font-size: 14px;
+}
+
+.control-mode.manual {
+    border-left: 4px solid var(--color-primary);
+}
+
+.control-mode.velocity {
+    border-left: 4px solid var(--color-info);
+}
+
+/* Joystick container with status */
+.joystick-container {
+    background: var(--bg-panel);
+    padding: 20px;
+    margin: 20px auto;
+    border-radius: 8px;
+    max-width: 500px;
+    text-align: center;
+}
+
+.joystick-container h2 {
+    margin-top: 0;
+}
+
+.joystick-values {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--text-muted);
+}
+
+.motor-values {
+    margin-top: 10px;
+    font-size: 14px;
+    color: var(--color-primary);
+}
+
+/* Mobile adjustments */
+@media (max-width: 600px) {
+    #joystick {
+        width: 180px;
+        height: 180px;
+    }
+    
+    #stick {
+        width: 35px;
+        height: 35px;
+        top: 72.5px;
+        left: 72.5px;
+    }
+}

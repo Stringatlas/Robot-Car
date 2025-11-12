@@ -4,134 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Motor Calibration</title>
+    <link rel="stylesheet" href="/common.css">
+    <link rel="stylesheet" href="/components/nav.css">
+    <link rel="stylesheet" href="/components/console.css">
+    <script src="/components/websocket.js"></script>
+    <script src="/components/console.js"></script>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: #1a1a1a;
-            color: #fff;
-            padding: 0;
-            margin: 0;
-        }
-        nav {
-            background: #2a2a2a;
-            padding: 15px;
-            border-bottom: 2px solid #4CAF50;
-        }
-        nav .nav-content {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-        nav a {
-            text-decoration: none;
-            font-size: 16px;
-        }
-        nav a.active {
-            color: #4CAF50;
-            font-weight: bold;
-            font-size: 18px;
-        }
-        nav a.inactive {
-            color: #ccc;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 20px;
-        }
-        h1 {
-            color: #4CAF50;
-            text-align: center;
-        }
-        .control-panel {
-            background: #222;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        .button {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 5px;
-        }
-        .button:hover {
-            background: #45a049;
-        }
-        .button:disabled {
-            background: #666;
-            cursor: not-allowed;
-        }
-        .button.stop {
-            background: #f44336;
-        }
-        .button.stop:hover {
-            background: #da190b;
-        }
-        .status {
-            background: #333;
-            padding: 15px;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        .chart-container {
-            background: #222;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        canvas {
-            max-width: 100%;
-            background: #2a2a2a;
-        }
-        .data-table {
-            background: #222;
-            padding: 20px;
-            border-radius: 8px;
-            overflow-x: auto;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            padding: 10px;
-            text-align: center;
-            border: 1px solid #444;
-        }
-        th {
-            background: #333;
-            color: #4CAF50;
-        }
-        .config {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        .config-item label {
-            display: block;
-            margin-bottom: 5px;
-            color: #ccc;
-        }
-        .config-item input {
-            width: 100%;
-            padding: 8px;
-            background: #333;
-            border: 1px solid #555;
-            border-radius: 4px;
-            color: #fff;
-        }
+        /* Calibration page-specific styles only */
         .export-buttons {
             display: flex;
             gap: 10px;
             margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        
+        /* Calibration instructions styling */
+        details .instructions {
+            margin-top: 10px;
+            font-size: 13px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        
+        details .instructions strong {
+            color: #ff9800;
         }
     </style>
 </head>
@@ -143,13 +39,16 @@
         </div>
     </nav>
     
-    <div class="container">
-        <h1>🔧 Motor Calibration & Tuning</h1>
+    <h1 style="text-align: center; margin: 20px 0;">🔧 Motor Calibration & Tuning</h1>
+    
+    <div class="main-layout">
+        <!-- Main Content Column -->
+        <div class="main-content">
         
         <!-- Direct Motor Control -->
         <div class="control-panel">
             <h2>Direct Motor Control</h2>
-            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Directly command motor powers for basic testing (-1 to 1 range)</p>
+            <p class="text-muted mb-15" style="font-size: 14px;">Directly command motor powers for basic testing (-1 to 1 range)</p>
             <div class="config">
                 <div class="config-item">
                     <label>Left Motor Power (-1 to 1):</label>
@@ -160,7 +59,7 @@
                     <input type="number" id="right-motor-input" value="0" min="-1" max="1" step="0.1">
                 </div>
             </div>
-            <div style="margin-top: 15px;">
+            <div class="mt-15">
                 <button class="button" onclick="setMotorPowers()">Set Motor Powers</button>
                 <button class="button stop" onclick="stopMotors()">Stop Motors</button>
             </div>
@@ -169,18 +68,18 @@
         <!-- Manual Velocity Feedforward Tuning -->
         <div class="control-panel">
             <h2>Manual Velocity Feedforward Tuning</h2>
-            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">Manually tune feedforward gain and deadzone parameters</p>
+            <p class="text-muted mb-15" style="font-size: 14px;">Manually tune feedforward gain and deadzone parameters</p>
             
-            <details style="margin-bottom: 15px; padding: 10px; background: #333; border-radius: 5px;">
-                <summary style="cursor: pointer; color: #4CAF50; font-weight: bold;">📖 Tuning Instructions</summary>
-                <div style="margin-top: 10px; font-size: 13px; color: #ccc; line-height: 1.6;">
-                    <strong style="color: #ff9800;">Step 1: Tune Deadzone</strong><br>
+            <details class="mb-15">
+                <summary>📖 Tuning Instructions</summary>
+                <div class="instructions">
+                    <strong>Step 1: Tune Deadzone</strong><br>
                     1. Click "Zero" to set gain to 0<br>
                     2. Set deadzone to 0<br>
                     3. Slowly increase deadzone until wheels just barely start spinning<br>
                     4. Add 5-10 PWM as margin<br><br>
                     
-                    <strong style="color: #ff9800;">Step 2: Tune Gain</strong><br>
+                    <strong>Step 2: Tune Gain</strong><br>
                     1. Set deadzone to value from Step 1<br>
                     2. Command velocity (try 20 cm/s)<br>
                     3. Wait 2 seconds for steady state<br>
@@ -213,7 +112,7 @@
                 </div>
             </div>
             
-            <div style="margin-top: 15px;">
+            <div class="mt-15">
                 <button class="button" onclick="setFFGain()">Set Gain</button>
                 <button class="button" onclick="zeroGain()">Zero Gain</button>
                 <button class="button" onclick="setDeadzone()">Set Deadzone</button>
@@ -229,13 +128,13 @@
         <!-- Polynomial Mapping Configuration -->
         <div class="control-panel">
             <h2>🔢 Polynomial Velocity Mapping</h2>
-            <p style="color: #888; font-size: 14px; margin-bottom: 15px;">
+            <p class="text-muted mb-15" style="font-size: 14px;">
                 Use cubic polynomial regression for accurate PWM ↔ velocity mapping
             </p>
             
-            <details style="margin-bottom: 15px; padding: 10px; background: #333; border-radius: 5px;">
-                <summary style="cursor: pointer; color: #4CAF50; font-weight: bold;">📖 About Polynomial Mapping</summary>
-                <div style="margin-top: 10px; font-size: 13px; color: #ccc; line-height: 1.6;">
+            <details class="mb-15">
+                <summary>📖 About Polynomial Mapping</summary>
+                <div class="instructions">
                     Motors have <strong>non-linear</strong> response curves. Linear feedforward (PWM = deadzone + gain×velocity) 
                     is inaccurate, especially at low/high speeds.<br><br>
                     
@@ -485,10 +384,23 @@
                 </tbody>
             </table>
         </div>
+        </div>
+        
+        <!-- Console Sidebar -->
+        <div class="console-sidebar">
+            <div class="console-container">
+                <div class="console-header">
+                    <h2>System Console</h2>
+                    <button class='button secondary' onclick='clearConsole()' style="padding: 5px 15px; font-size: 12px;">Clear</button>
+                </div>
+                <div id="console" class="console">
+                    <div class="text-muted">Waiting for telemetry...</div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        let ws = null;
         let calibrationRunning = false;
         let currentMotor = null;
         let calibrationData = [];
@@ -516,77 +428,62 @@
             kd: 0
         };
 
-        // Connect to WebSocket
-        function connectWebSocket() {
-            ws = new WebSocket(`ws://${window.location.hostname}/ws`);
-            
-            ws.onopen = () => {
-                console.log('WebSocket Connected');
-                updateStatus('Connected to robot');
-            };
-            
-            ws.onmessage = (event) => {
-                const data = event.data;
-                
-                // Try to parse as JSON first
-                try {
-                    const json = JSON.parse(data);
-                    
-                    // Handle encoder data in JSON format
-                    if (json.left && json.right) {
-                        const leftVel = parseFloat(json.left.velocity);
-                        const rightVel = parseFloat(json.right.velocity);
+        // Register callbacks with WSManager for calibration-specific data
+        WSManager.on('onEncoderData', function(data) {
+            const leftVel = parseFloat(data.left.velocity);
+            const rightVel = parseFloat(data.right.velocity);
+            const motorLeftPWM = data.motorLeft !== undefined ? parseFloat(data.motorLeft) : null;
+            const motorRightPWM = data.motorRight !== undefined ? parseFloat(data.motorRight) : null;
 
-                        // Capture motor PWM values (if present) for saturation checks
-                        const motorLeftPWM = json.motorLeft !== undefined ? parseFloat(json.motorLeft) : null;
-                        const motorRightPWM = json.motorRight !== undefined ? parseFloat(json.motorRight) : null;
+            if (calibrationRunning) {
+                updateCurrentData(leftVel, rightVel);
+            }
 
-                        if (calibrationRunning) {
-                            updateCurrentData(leftVel, rightVel);
-                        }
-
-                        if (autotuneRunning) {
-                            // store last seen PWM on autotune state for sanity checks
-                            if (motorLeftPWM !== null && motorRightPWM !== null) {
-                                autotuneData.lastLeftPWM = motorLeftPWM;
-                                autotuneData.lastRightPWM = motorRightPWM;
-                                autotuneData.lastAbsPWM = (Math.abs(motorLeftPWM) + Math.abs(motorRightPWM)) / 2.0;
-                            }
-                            processAutotuneData(leftVel, rightVel);
-                        }
-                    }
-                } catch (e) {
-                    // Not JSON, try string commands
-                    if (data.startsWith('VEL_ERROR:')) {
-                        const parts = data.substring(10).split(',');
-                        const leftError = parseFloat(parts[0]);
-                        const rightError = parseFloat(parts[1]);
-                        const pidEnabled = parts[2] === 'true';
-
-                        document.getElementById('pidStatus').textContent = 
-                            `PID Status: ${pidEnabled ? 'Enabled' : 'Disabled'} | ` +
-                            `Left Error: ${leftError.toFixed(2)} cm/s | Right Error: ${rightError.toFixed(2)} cm/s`;
-
-                        document.getElementById('velocityStatus').textContent = 
-                            `Velocity Tracking - Left Error: ${leftError.toFixed(1)} cm/s | Right Error: ${rightError.toFixed(1)} cm/s`;
-                    } else if (data.startsWith('COMMAND_ACK:')) {
-                        // Example: COMMAND_ACK:VELOCITY:20.0
-                        const parts = data.split(':');
-                        if (parts.length >= 3 && parts[1] === 'VELOCITY') {
-                            const ackVel = parseFloat(parts[2]);
-                            console.log('Server ACKed VELOCITY command:', ackVel);
-                            updateAutotuneStatus(`Server ACKed velocity ${ackVel.toFixed(1)} cm/s`);
-                        }
-                    }
+            if (autotuneRunning) {
+                if (motorLeftPWM !== null && motorRightPWM !== null) {
+                    autotuneData.lastLeftPWM = motorLeftPWM;
+                    autotuneData.lastRightPWM = motorRightPWM;
+                    autotuneData.lastAbsPWM = (Math.abs(motorLeftPWM) + Math.abs(motorRightPWM)) / 2.0;
                 }
-            };
-            
-            ws.onclose = () => {
-                console.log('WebSocket Disconnected');
-                updateStatus('Disconnected - Retrying...');
-                setTimeout(connectWebSocket, 1000);
-            };
-        }
+                processAutotuneData(leftVel, rightVel);
+            }
+        });
+
+        // Handle calibration-specific string messages
+        WSManager.on('onRawMessage', function(data) {
+            if (data.startsWith('VEL_ERROR:')) {
+                const parts = data.substring(10).split(',');
+                const leftError = parseFloat(parts[0]);
+                const rightError = parseFloat(parts[1]);
+                const pidEnabled = parts[2] === 'true';
+
+                document.getElementById('pidStatus').textContent = 
+                    `PID Status: ${pidEnabled ? 'Enabled' : 'Disabled'} | ` +
+                    `Left Error: ${leftError.toFixed(2)} cm/s | Right Error: ${rightError.toFixed(2)} cm/s`;
+
+                document.getElementById('velocityStatus').textContent = 
+                    `Velocity Tracking - Left Error: ${leftError.toFixed(1)} cm/s | Right Error: ${rightError.toFixed(1)} cm/s`;
+            } else if (data.startsWith('COMMAND_ACK:')) {
+                const parts = data.split(':');
+                if (parts.length >= 3 && parts[1] === 'VELOCITY') {
+                    const ackVel = parseFloat(parts[2]);
+                    console.log('Server ACKed VELOCITY command:', ackVel);
+                    updateAutotuneStatus(`Server ACKed velocity ${ackVel.toFixed(1)} cm/s`);
+                }
+            } else if (data.startsWith('CALIBRATION_POINT:')) {
+                const parts = data.substring(18).split(',');
+                const pwm = parseInt(parts[0]);
+                const leftVel = parseFloat(parts[1]);
+                const rightVel = parseFloat(parts[2]);
+                addDataPoint(pwm, leftVel, rightVel);
+            } else if (data.startsWith('CALIBRATION_COMPLETE')) {
+                stopCalibration();
+                updateStatus('Calibration complete!');
+            } else if (data.startsWith('CALIBRATION_PROGRESS:')) {
+                const progress = data.substring(21);
+                updateStatus(`Calibrating... ${progress}`);
+            }
+        });
 
         function updateStatus(message) {
             document.getElementById('status').textContent = 'Status: ' + message;
@@ -605,17 +502,13 @@
             const clampedLeft = Math.max(-1, Math.min(1, leftPower));
             const clampedRight = Math.max(-1, Math.min(1, rightPower));
             
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('MOTORS:' + clampedLeft.toFixed(2) + ',' + clampedRight.toFixed(2));
-                console.log('Set motors - Left:', clampedLeft, 'Right:', clampedRight);
-            }
+            WSManager.send('MOTORS:' + clampedLeft.toFixed(2) + ',' + clampedRight.toFixed(2));
+            console.log('Set motors - Left:', clampedLeft, 'Right:', clampedRight);
         }
         
         function stopMotors() {
-            if (ws && ws.readyState === WebSocket.OPEN) {
-                ws.send('MOTORS:0,0');
-                ws.send('VELOCITY:0');
-            }
+            WSManager.send('MOTORS:0,0');
+            WSManager.send('VELOCITY:0');
             document.getElementById('left-motor-input').value = 0;
             document.getElementById('right-motor-input').value = 0;
         }

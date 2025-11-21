@@ -106,23 +106,23 @@ bool ConfigManager::updateFromJson(const String& jsonStr) {
     }
     
     // Update only provided fields
-    if (doc.containsKey("feedforwardGain")) config.feedforwardGain = doc["feedforwardGain"];
-    if (doc.containsKey("deadzonePWM")) config.deadzonePWM = doc["deadzonePWM"];
-    if (doc.containsKey("pidEnabled")) config.pidEnabled = doc["pidEnabled"];
-    if (doc.containsKey("pidKp")) config.pidKp = doc["pidKp"];
-    if (doc.containsKey("pidKi")) config.pidKi = doc["pidKi"];
-    if (doc.containsKey("pidKd")) config.pidKd = doc["pidKd"];
+    if (doc["feedforwardGain"].is<float>()) config.feedforwardGain = doc["feedforwardGain"];
+    if (doc["deadzonePWM"].is<float>()) config.deadzonePWM = doc["deadzonePWM"];
+    if (doc["pidEnabled"].is<bool>()) config.pidEnabled = doc["pidEnabled"];
+    if (doc["pidKp"].is<float>()) config.pidKp = doc["pidKp"];
+    if (doc["pidKi"].is<float>()) config.pidKi = doc["pidKi"];
+    if (doc["pidKd"].is<float>()) config.pidKd = doc["pidKd"];
     
-    if (doc.containsKey("polynomialEnabled")) config.polynomialEnabled = doc["polynomialEnabled"];
-    if (doc.containsKey("vel2pwm_a0")) config.vel2pwm_a0 = doc["vel2pwm_a0"];
-    if (doc.containsKey("vel2pwm_a1")) config.vel2pwm_a1 = doc["vel2pwm_a1"];
-    if (doc.containsKey("vel2pwm_a2")) config.vel2pwm_a2 = doc["vel2pwm_a2"];
-    if (doc.containsKey("vel2pwm_a3")) config.vel2pwm_a3 = doc["vel2pwm_a3"];
+    if (doc["polynomialEnabled"].is<bool>()) config.polynomialEnabled = doc["polynomialEnabled"];
+    if (doc["vel2pwm_a0"].is<float>()) config.vel2pwm_a0 = doc["vel2pwm_a0"];
+    if (doc["vel2pwm_a1"].is<float>()) config.vel2pwm_a1 = doc["vel2pwm_a1"];
+    if (doc["vel2pwm_a2"].is<float>()) config.vel2pwm_a2 = doc["vel2pwm_a2"];
+    if (doc["vel2pwm_a3"].is<float>()) config.vel2pwm_a3 = doc["vel2pwm_a3"];
     
-    if (doc.containsKey("pwm2vel_b0")) config.pwm2vel_b0 = doc["pwm2vel_b0"];
-    if (doc.containsKey("pwm2vel_b1")) config.pwm2vel_b1 = doc["pwm2vel_b1"];
-    if (doc.containsKey("pwm2vel_b2")) config.pwm2vel_b2 = doc["pwm2vel_b2"];
-    if (doc.containsKey("pwm2vel_b3")) config.pwm2vel_b3 = doc["pwm2vel_b3"];
+    if (doc["pwm2vel_b0"].is<float>()) config.pwm2vel_b0 = doc["pwm2vel_b0"];
+    if (doc["pwm2vel_b1"].is<float>()) config.pwm2vel_b1 = doc["pwm2vel_b1"];
+    if (doc["pwm2vel_b2"].is<float>()) config.pwm2vel_b2 = doc["pwm2vel_b2"];
+    if (doc["pwm2vel_b3"].is<float>()) config.pwm2vel_b3 = doc["pwm2vel_b3"];
     
     return true;
 }

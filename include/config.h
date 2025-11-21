@@ -34,6 +34,9 @@
 #define MOTOR_LEFT_PWM_CHANNEL 0
 #define MOTOR_RIGHT_PWM_CHANNEL 1
 
+#define IMU_SCL 41
+#define IMU_SDA 40
+
 // Battery Voltage Reader
 #define BATTERY_VOLTAGE_PIN 9    // ADC1 pin (GPIO 1-10 work with WiFi on ESP32-S3)
 #define BATTERY_VOLTAGE_MULTIPLIER 6.1  // 6.1/1 voltage divider ratio

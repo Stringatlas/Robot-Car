@@ -97,17 +97,27 @@ function initJoystick() {
     joystick = document.getElementById('joystick');
     stick = document.getElementById('stick');
     isDragging = false;
-    centerX = 100;
-    centerY = 100;
     
     if (!joystick || !stick) {
         console.error('Joystick elements not found');
         return;
     }
     
+    // Calculate center based on actual joystick size
+    function updateCenter() {
+        const rect = joystick.getBoundingClientRect();
+        centerX = rect.width / 2;
+        centerY = rect.height / 2;
+    }
+    updateCenter();
+    
+    // Recalculate center on window resize
+    window.addEventListener('resize', updateCenter);
+    
     joystick.addEventListener('touchstart', function(e) {
         if (hasControl) {
             isDragging = true; 
+            updateCenter(); // Update center when touch starts
             e.preventDefault();
         }
     });
@@ -122,13 +132,21 @@ function initJoystick() {
         }
     });
     
-    joystick.addEventListener('touchend', function(e) {
+    // Listen on document level to catch touchend even if touch moves outside joystick
+    document.addEventListener('touchend', function(e) {
         if (hasControl && isDragging) {
             isDragging = false;
-            stick.style.left = '80px'; 
-            stick.style.top = '80px';
+            centerStick();
             sendJoystick(0, 0);
             e.preventDefault();
+        }
+    });
+    
+    document.addEventListener('touchcancel', function(e) {
+        if (hasControl && isDragging) {
+            isDragging = false;
+            centerStick();
+            sendJoystick(0, 0);
         }
     });
     
@@ -153,12 +171,18 @@ function initJoystick() {
     document.addEventListener('mouseup', function(e) {
         if(isDragging && hasControl) {
             isDragging = false;
-            stick.style.left = '80px'; 
-            stick.style.top = '80px';
+            centerStick();
             sendJoystick(0, 0);
             e.preventDefault();
         }
     });
+}
+
+// Helper function to center the stick
+function centerStick() {
+    const stickSize = parseFloat(getComputedStyle(stick).width);
+    stick.style.left = (centerX - stickSize / 2) + 'px';
+    stick.style.top = (centerY - stickSize / 2) + 'px';
 }
 
 function sendJoystick(x, y) {

@@ -7,6 +7,9 @@
     <link rel="stylesheet" href="/common.css">
     <link rel="stylesheet" href="/components/nav.css">
     <link rel="stylesheet" href="/components/console.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <!-- Uncomment for local testing without ESP32 -->
+    <!-- <script src="/mock-websocket.js"></script> -->
     <script src="/components/websocket.js"></script>
     <script src="/components/console.js"></script>
     <script src="calibration.js"></script>
@@ -384,7 +387,7 @@
 
         <div class="chart-container">
             <h2>PWM vs Velocity (Voltage Sweep)</h2>
-            <canvas id="chart" width="800" height="400"></canvas>
+            <canvas id="chart"></canvas>
         </div>
 
         <div class="control-panel">

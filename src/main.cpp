@@ -4,6 +4,7 @@
 #include <ArduinoOTA.h>
 #include "config.h"
 #include "hardware/Encoder.h"
+#include "hardware/IMU.h"
 #include "network/WebServer.h"
 #include "drive/DriveController.h"
 #include "hardware/BatteryMonitor.h"
@@ -11,24 +12,16 @@
 #include "network/Telemetry.h"
 #include "utils/ConfigManager.h"
 
-// Create encoder instances
 Encoder leftEncoder(LEFT_ENCODER_A, LEFT_ENCODER_B, ENCODER_PPR, WHEEL_DIAMETER);
 Encoder rightEncoder(RIGHT_ENCODER_A, RIGHT_ENCODER_B, ENCODER_PPR, WHEEL_DIAMETER, true); // Reversed
-
-// Create drive controller instance
 DriveController driveController;
-
-// Create battery monitor instance
 BatteryMonitor batteryMonitor(BATTERY_VOLTAGE_PIN, BATTERY_VOLTAGE_MULTIPLIER);
-
-// Create velocity controller instance
 VelocityController velocityController;
-
-// Create configuration manager instance
 ConfigManager configManager;
-
-// Create web server instance
 WebServerManager webServer(WEB_SERVER_PORT);
+IMU imu;
+
+unsigned long lastIMULog = 0;
 
 void setupWiFi() {
     WiFi.mode(WIFI_STA);
@@ -131,6 +124,17 @@ void setup() {
     rightEncoder.begin();
     TELEM_LOG("✓ Encoders initialized");
     
+    // Initialize IMU
+    TELEM_LOG("Setting up IMU...");
+    if (imu.begin()) {
+        TELEM_LOG("✓ IMU connected");
+        TELEM_LOG("Calibrating IMU (keep still)...");
+        imu.calibrate();
+        TELEM_LOG("✓ IMU calibrated");
+    } else {
+        TELEM_LOG("✗ IMU connection failed!");
+    }
+    
     // Initialize velocity controller
     velocityController.attachEncoders(&leftEncoder, &rightEncoder);
     velocityController.begin();
@@ -175,18 +179,24 @@ void setup() {
 }
 
 void loop() {
-    // Handle OTA updates
     ArduinoOTA.handle();
-    
-    // Handle WebSocket communication
+
     webServer.handleWebSocket();
     
-    // Update encoder velocities
     leftEncoder.update();
     rightEncoder.update();
     
-    // Update web server control state machine
-    // This handles mode switching, calibration, and velocity control
+    // if (imu.isCalibrated()) {
+    //     imu.update();
+        
+    //     if (millis() - lastIMULog >= 100) {
+    //         lastIMULog = millis();
+    //         TELEM_LOGF("IMU | AX:%.1f AY:%.1f AZ:%.1f GZ:%.2f° Heading:%.1f°", 
+    //             imu.getAccelX(), imu.getAccelY(), imu.getAccelZ(), 
+    //             imu.getGyroZ(), imu.getHeadingDegrees());
+    //     }
+    // }
+    
     webServer.update();
     
     delay(10);

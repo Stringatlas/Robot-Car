@@ -1,0 +1,8 @@
+# Test Environment - Generated Files
+# All web content is copied from ../data/ using sync-files.sh
+
+# Web content folder (auto-generated)
+web_content/
+
+# System files
+.DS_Store

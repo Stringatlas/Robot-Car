@@ -1,8 +1,7 @@
 let calibrationRunning = false;
 let currentMotor = null;
 let calibrationData = [];
-let canvas = document.getElementById('chart');
-let ctx = canvas.getContext('2d');
+let calibrationChart = null;
 
 // PID Autotuner state
 let autotuneRunning = false;
@@ -547,91 +546,132 @@ function addDataPoint(pwm, leftVel, rightVel) {
 }
 
 function clearChart() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    drawGrid();
+    if (calibrationChart) {
+        calibrationChart.destroy();
+        calibrationChart = null;
+    }
 }
 
 function clearTable() {
     document.getElementById('dataTable').innerHTML = '';
 }
 
-function drawGrid() {
-    ctx.strokeStyle = '#444';
-    ctx.lineWidth = 1;
+function initChart() {
+    const canvas = document.getElementById('chart');
+    if (!canvas) return;
     
-    // Vertical lines
-    for (let i = 0; i <= 10; i++) {
-        const x = (canvas.width / 10) * i;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x, canvas.height);
-        ctx.stroke();
-    }
-    
-    // Horizontal lines
-    for (let i = 0; i <= 10; i++) {
-        const y = (canvas.height / 10) * i;
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(canvas.width, y);
-        ctx.stroke();
-    }
+    const ctx = canvas.getContext('2d');
+    calibrationChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            datasets: [
+                {
+                    label: 'Left Motor',
+                    data: [],
+                    borderColor: '#2196F3',
+                    backgroundColor: 'rgba(33, 150, 243, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.1
+                },
+                {
+                    label: 'Right Motor',
+                    data: [],
+                    borderColor: '#f44336',
+                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                    borderWidth: 2,
+                    pointRadius: 4,
+                    pointHoverRadius: 6,
+                    tension: 0.1
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#fff',
+                        font: {
+                            size: 14
+                        }
+                    }
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    callbacks: {
+                        label: function(context) {
+                            let label = context.dataset.label || '';
+                            if (label) {
+                                label += ': ';
+                            }
+                            label += context.parsed.y.toFixed(2) + ' cm/s';
+                            return label;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    type: 'linear',
+                    title: {
+                        display: true,
+                        text: 'PWM',
+                        color: '#fff',
+                        font: {
+                            size: 14
+                        }
+                    },
+                    grid: {
+                        color: '#444'
+                    },
+                    ticks: {
+                        color: '#ccc'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: 'Velocity (cm/s)',
+                        color: '#fff',
+                        font: {
+                            size: 14
+                        }
+                    },
+                    grid: {
+                        color: '#444'
+                    },
+                    ticks: {
+                        color: '#ccc'
+                    }
+                }
+            },
+            interaction: {
+                mode: 'nearest',
+                axis: 'x',
+                intersect: false
+            }
+        }
+    });
 }
 
 function drawChart() {
-    clearChart();
+    if (!calibrationChart) {
+        initChart();
+    }
     
     if (calibrationData.length === 0) return;
     
-    const maxPWM = 255;
-    const maxVel = Math.max(...calibrationData.map(d => Math.max(d.leftVel, d.rightVel))) * 1.1;
+    // Update chart data
+    calibrationChart.data.datasets[0].data = calibrationData.map(p => ({x: p.pwm, y: p.leftVel}));
+    calibrationChart.data.datasets[1].data = calibrationData.map(p => ({x: p.pwm, y: p.rightVel}));
     
-    // Draw left motor data (blue)
-    ctx.strokeStyle = '#2196F3';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    calibrationData.forEach((point, i) => {
-        const x = (point.pwm / maxPWM) * canvas.width;
-        const y = canvas.height - (point.leftVel / maxVel) * canvas.height;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-    
-    // Draw right motor data (red)
-    ctx.strokeStyle = '#f44336';
-    ctx.beginPath();
-    calibrationData.forEach((point, i) => {
-        const x = (point.pwm / maxPWM) * canvas.width;
-        const y = canvas.height - (point.rightVel / maxVel) * canvas.height;
-        if (i === 0) ctx.moveTo(x, y);
-        else ctx.lineTo(x, y);
-    });
-    ctx.stroke();
-    
-    // Draw points
-    calibrationData.forEach(point => {
-        const x = (point.pwm / maxPWM) * canvas.width;
-        const yLeft = canvas.height - (point.leftVel / maxVel) * canvas.height;
-        const yRight = canvas.height - (point.rightVel / maxVel) * canvas.height;
-        
-        ctx.fillStyle = '#2196F3';
-        ctx.fillRect(x - 3, yLeft - 3, 6, 6);
-        
-        ctx.fillStyle = '#f44336';
-        ctx.fillRect(x - 3, yRight - 3, 6, 6);
-    });
-    
-    // Draw legend
-    ctx.fillStyle = '#2196F3';
-    ctx.fillRect(10, 10, 20, 10);
-    ctx.fillStyle = '#fff';
-    ctx.fillText('Left Motor', 35, 20);
-    
-    ctx.fillStyle = '#f44336';
-    ctx.fillRect(10, 30, 20, 10);
-    ctx.fillStyle = '#fff';
-    ctx.fillText('Right Motor', 35, 40);
+    calibrationChart.update();
 }
 
 function exportCSV() {
@@ -746,7 +786,7 @@ function stopMotors() {
 
 // Initialize on page load
 window.addEventListener('load', () => {
-    drawGrid();
+    initChart();
     updateFFGainDisplay();
     updateDeadzoneDisplay();
     

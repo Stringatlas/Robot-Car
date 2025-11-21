@@ -51,6 +51,10 @@ private:
     unsigned long lastCommandTime;  // Track when last command received
     static constexpr unsigned long CONTROL_TIMEOUT_MS = 500;  // Revert to IDLE after 500ms
     
+    // Joystick state - track last position to avoid timeout when held steady
+    float lastJoystickX;
+    float lastJoystickY;
+    
     // Calibration state
     bool calibrationActive;
     String calibrationMotor;  // "left", "right", or "both"

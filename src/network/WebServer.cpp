@@ -6,7 +6,7 @@
 
 WebServerManager::WebServerManager(int port) 
     : server(port), ws("/ws"), leftEncoder(nullptr), rightEncoder(nullptr), driveController(nullptr), batteryMonitor(nullptr), velocityController(nullptr), configManager(nullptr), lastUpdate(0), controllingClientId(0),
-      currentMode(ControlMode::IDLE), lastCommandTime(0),
+      currentMode(ControlMode::IDLE), lastCommandTime(0), lastJoystickX(0.0f), lastJoystickY(0.0f),
       calibrationActive(false), calibrationMotor(""), calibrationPWM(0), calibrationStartPWM(0), calibrationEndPWM(0), calibrationStepSize(0), calibrationHoldTime(0), calibrationStepStart(0) {}
 
 void WebServerManager::begin(Encoder* left, Encoder* right, DriveController* drive, BatteryMonitor* battery, VelocityController* velCtrl, ConfigManager* config) {
@@ -101,6 +101,9 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                         if (commaIndex > 0) {
                             float x = coords.substring(0, commaIndex).toFloat();
                             float y = coords.substring(commaIndex + 1).toFloat();
+                            // Store current joystick position
+                            lastJoystickX = x;
+                            lastJoystickY = y;
                             // Set mode and control motors: y=forward, x=turn
                             setControlMode(ControlMode::JOYSTICK);
                             driveController->setPowerControl(y, x);
@@ -517,6 +520,9 @@ void WebServerManager::setControlMode(ControlMode mode) {
             driveController->setLeftMotorPower(0);
             driveController->setRightMotorPower(0);
             velocityController->setVelocity(0, 0);
+            // Reset joystick position when going idle
+            lastJoystickX = 0.0f;
+            lastJoystickY = 0.0f;
         }
         
         currentMode = mode;
@@ -529,10 +535,27 @@ void WebServerManager::setControlMode(ControlMode mode) {
 
 void WebServerManager::checkControlTimeout() {
     // If no commands received recently, revert to IDLE (except during calibration)
-    if (currentMode != ControlMode::IDLE && 
-        currentMode != ControlMode::CALIBRATION && 
-        millis() - lastCommandTime > CONTROL_TIMEOUT_MS) {
+    if (currentMode == ControlMode::IDLE || currentMode == ControlMode::CALIBRATION) {
+        return;  // Nothing to timeout
+    }
+    
+    // Special handling for joystick mode - if joystick is held at non-zero position,
+    // don't timeout even if no new messages arrive (user is holding steady)
+    if (currentMode == ControlMode::JOYSTICK) {
+        // Only timeout if joystick is at center (0,0) OR if timeout exceeded
+        bool joystickAtCenter = (abs(lastJoystickX) < 0.01f && abs(lastJoystickY) < 0.01f);
+        if (joystickAtCenter && millis() - lastCommandTime > CONTROL_TIMEOUT_MS) {
+            setControlMode(ControlMode::IDLE);
+            TELEM_LOG("⚠️ Joystick at center - reverting to IDLE");
+        }
+        // If joystick is active (not at center), don't timeout at all
+        return;
+    }
+    
+    // For other modes, use standard timeout
+    if (millis() - lastCommandTime > CONTROL_TIMEOUT_MS) {
         setControlMode(ControlMode::IDLE);
+        TELEM_LOG("⚠️ Control timeout - reverting to IDLE");
     }
 }
 

@@ -1,4 +1,4 @@
-# ESP32 Robot Car - Project Structure
+# ESP32 Robot Car
 
 This project uses a modular architecture for an ESP32-S3 based robot car with wheel encoders, OTA updates, and web interface.
 
@@ -46,7 +46,7 @@ Edit `include/config.h`:
 #define WHEEL_DIAMETER 6.5     // Wheel diameter in cm
 ```
 
-## 🚀 Building & Uploading
+## Building & Uploading
 
 ### Build the firmware:
 ```bash
@@ -68,12 +68,12 @@ pio run --target uploadfs
 pio run --target upload --upload-port <IP_ADDRESS>
 ```
 
-## 📡 Features
+## Features
 
-### ✅ Encoder Class
+### Encoder Class
 - **Location**: `src/Encoder.h` & `src/Encoder.cpp`
 - **Features**:
-  - Quadrature decoding (4x resolution)
+  - Quadrature decoding
   - Real-time velocity calculation
   - Distance tracking
   - RPM measurement
@@ -91,7 +91,7 @@ float velocity = leftEncoder.getVelocity();  // cm/s
 float rpm = leftEncoder.getRPM();
 ```
 
-### ✅ Web Server with OTA
+### Web Server with OTA
 - **Location**: `src/WebServer.h` & `src/WebServer.cpp`
 - **Features**:
   - Async web server on port 80
@@ -105,12 +105,12 @@ float rpm = leftEncoder.getRPM();
 - `POST /api/reset` - Reset encoder counts
 - `POST /upload` - Upload new web files
 
-### ✅ OTA Updates
+### OTA Updates
 - **Hostname**: `ESP32-RobotCar.local`
 - **Password**: `admin123` (change in `config.h`)
 - Update firmware or filesystem wirelessly via Arduino IDE or PlatformIO
 
-## 🌐 Web Interface
+## Web Interface
 
 After connecting to WiFi, access the dashboard at:
 ```
@@ -142,7 +142,7 @@ Right Encoder:
   - GND → GND
 ```
 
-## 📊 Serial Monitor Output
+## Serial Monitor Output
 
 The system prints encoder data every 500ms:
 ```
@@ -162,16 +162,7 @@ Left:  Count: 120 | Distance: 2.45 cm | Velocity: 5.23 cm/s | RPM: 15.2
 Right: Count: 118 | Distance: 2.41 cm | Velocity: 5.10 cm/s | RPM: 14.9
 ```
 
-## 📝 Next Steps
-
-Future additions could include:
-- Motor control class (PWM speed control)
-- PID controller for velocity/position
-- WebSocket for real-time updates
-- Odometry calculations (position tracking)
-- Motion control (move forward/backward/turn)
-
-## 🐛 Troubleshooting
+## Troubleshooting
 
 ### ESP32 not detected:
 1. Hold BOOT button while plugging in USB
@@ -187,7 +178,7 @@ Future additions could include:
 - Check Serial Monitor for IP address
 - Verify LittleFS mounted successfully
 
-## 📦 Dependencies
+## Dependencies
 
 All dependencies are auto-installed via PlatformIO:
 - ESP Async WebServer (^1.2.3)

@@ -24,13 +24,19 @@
 #include "../drive/VelocityController.h"
 #include "../utils/ConfigManager.h"
 
-// Control modes for robot operation
-enum class ControlMode {
-    IDLE,           // No control active
-    JOYSTICK,       // Joystick driving mode
-    DIRECT_MOTOR,   // Direct motor power control
-    VELOCITY,       // Velocity setpoint control
-    CALIBRATION     // Automatic calibration sweep
+enum class DriveMode {
+    IDLE,
+    JOYSTICK,
+    DIRECT_MOTOR,
+    VELOCITY,
+    CALIBRATION
+};
+
+enum class Messages
+{
+    TELEMETRY,
+    COMMAND,
+    CONFIG
 };
 
 class WebServerManager {
@@ -47,7 +53,7 @@ private:
     uint32_t controllingClientId;  // ID of client that has control (0 = none)
     
     // Control mode state
-    ControlMode currentMode;
+    DriveMode currentMode;
     unsigned long lastCommandTime;  // Track when last command received
     static constexpr unsigned long CONTROL_TIMEOUT_MS = 500;  // Revert to IDLE after 500ms
     
@@ -76,10 +82,10 @@ public:
     void update();  // Call this in loop - handles control mode state machine and calibration
     void updateCalibration();  // Internal - run calibration state machine
     bool isCalibrationActive() const { return calibrationActive; }  // Check if calibration is running
-    ControlMode getControlMode() const { return currentMode; }
+    DriveMode getControlMode() const { return currentMode; }
     
 private:
-    void setControlMode(ControlMode mode);
+    void setControlMode(DriveMode mode);
     void checkControlTimeout();
     
 private:

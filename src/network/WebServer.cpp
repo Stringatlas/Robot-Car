@@ -6,7 +6,7 @@
 
 WebServerManager::WebServerManager(int port) 
     : server(port), ws("/ws"), leftEncoder(nullptr), rightEncoder(nullptr), driveController(nullptr), batteryMonitor(nullptr), velocityController(nullptr), configManager(nullptr), lastUpdate(0), controllingClientId(0),
-      currentMode(ControlMode::IDLE), lastCommandTime(0), lastJoystickX(0.0f), lastJoystickY(0.0f),
+      currentMode(DriveMode::IDLE), lastCommandTime(0), lastJoystickX(0.0f), lastJoystickY(0.0f),
       calibrationActive(false), calibrationMotor(""), calibrationPWM(0), calibrationStartPWM(0), calibrationEndPWM(0), calibrationStepSize(0), calibrationHoldTime(0), calibrationStepStart(0) {}
 
 void WebServerManager::begin(Encoder* left, Encoder* right, DriveController* drive, BatteryMonitor* battery, VelocityController* velCtrl, ConfigManager* config) {
@@ -105,7 +105,7 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                             lastJoystickX = x;
                             lastJoystickY = y;
                             // Set mode and control motors: y=forward, x=turn
-                            setControlMode(ControlMode::JOYSTICK);
+                            setControlMode(DriveMode::JOYSTICK);
                             driveController->setPowerControl(y, x);
                         }
                     } else {
@@ -121,7 +121,7 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                             float leftPower = coords.substring(0, commaIndex).toFloat();
                             float rightPower = coords.substring(commaIndex + 1).toFloat();
                             // Set mode and control motors directly
-                            setControlMode(ControlMode::DIRECT_MOTOR);
+                            setControlMode(DriveMode::DIRECT_MOTOR);
                             driveController->setLeftMotorPower(leftPower);
                             driveController->setRightMotorPower(rightPower);
                             TELEM_LOGF("🎛️ Direct motor control - L:%.2f R:%.2f", leftPower, rightPower);
@@ -142,7 +142,7 @@ void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketCl
                 } else if (message.startsWith("VELOCITY:")) {
                     if (controllingClientId == client->id()) {
                         float velocity = message.substring(9).toFloat();
-                        setControlMode(ControlMode::VELOCITY);
+                        setControlMode(DriveMode::VELOCITY);
                         velocityController->setVelocity(velocity, velocity);
                         TELEM_LOGF("🎯 Velocity command: %.1f cm/s", velocity);
                         // Acknowledge command back to sender for client-side debugging
@@ -513,10 +513,10 @@ void WebServerManager::updateCalibration() {
     }
 }
 
-void WebServerManager::setControlMode(ControlMode mode) {
+void WebServerManager::setControlMode(DriveMode mode) {
     if (currentMode != mode) {
         // Stop everything when switching modes
-        if (mode == ControlMode::IDLE) {
+        if (mode == DriveMode::IDLE) {
             driveController->setLeftMotorPower(0);
             driveController->setRightMotorPower(0);
             velocityController->setVelocity(0, 0);
@@ -535,17 +535,17 @@ void WebServerManager::setControlMode(ControlMode mode) {
 
 void WebServerManager::checkControlTimeout() {
     // If no commands received recently, revert to IDLE (except during calibration)
-    if (currentMode == ControlMode::IDLE || currentMode == ControlMode::CALIBRATION) {
+    if (currentMode == DriveMode::IDLE || currentMode == DriveMode::CALIBRATION) {
         return;  // Nothing to timeout
     }
     
     // Special handling for joystick mode - if joystick is held at non-zero position,
     // don't timeout even if no new messages arrive (user is holding steady)
-    if (currentMode == ControlMode::JOYSTICK) {
+    if (currentMode == DriveMode::JOYSTICK) {
         // Only timeout if joystick is at center (0,0) OR if timeout exceeded
         bool joystickAtCenter = (abs(lastJoystickX) < 0.01f && abs(lastJoystickY) < 0.01f);
         if (joystickAtCenter && millis() - lastCommandTime > CONTROL_TIMEOUT_MS) {
-            setControlMode(ControlMode::IDLE);
+            setControlMode(DriveMode::IDLE);
             TELEM_LOG("⚠️ Joystick at center - reverting to IDLE");
         }
         // If joystick is active (not at center), don't timeout at all
@@ -554,7 +554,7 @@ void WebServerManager::checkControlTimeout() {
     
     // For other modes, use standard timeout
     if (millis() - lastCommandTime > CONTROL_TIMEOUT_MS) {
-        setControlMode(ControlMode::IDLE);
+        setControlMode(DriveMode::IDLE);
         TELEM_LOG("⚠️ Control timeout - reverting to IDLE");
     }
 }
@@ -565,32 +565,32 @@ void WebServerManager::update() {
     
     // Update calibration if active
     if (calibrationActive) {
-        setControlMode(ControlMode::CALIBRATION);
+        setControlMode(DriveMode::CALIBRATION);
         updateCalibration();
     }
     
     // Apply control based on current mode
     switch (currentMode) {
-        case ControlMode::IDLE:
+        case DriveMode::IDLE:
             // Do nothing - motors stay at last commanded state or zero
             break;
             
-        case ControlMode::JOYSTICK:
+        case DriveMode::JOYSTICK:
             // Joystick commands are applied directly in WebSocket handler
             // Just need to update velocity controller in case it's enabled
             break;
             
-        case ControlMode::DIRECT_MOTOR:
+        case DriveMode::DIRECT_MOTOR:
             // Direct motor commands are applied in WebSocket handler
             // Nothing to do here
             break;
             
-        case ControlMode::VELOCITY:
+        case DriveMode::VELOCITY:
             // Let velocity controller take over
             velocityController->update();
             break;
             
-        case ControlMode::CALIBRATION:
+        case DriveMode::CALIBRATION:
             // Calibration is handled in updateCalibration()
             // Don't run velocity controller during calibration
             break;

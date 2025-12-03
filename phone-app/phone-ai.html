@@ -5,7 +5,9 @@
     <meta name='viewport' content='width=device-width, initial-scale=1, user-scalable=no, maximum-scale=1'>
     <title>AI Phone Testing</title>
     <!-- TensorFlow.js and COCO-SSD for object detection -->
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.11.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.17.0/dist/tf-backend-webgpu.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.17.0/dist/tf-backend-wasm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
     
     <style>
@@ -246,7 +248,7 @@
     </style>
 </head>
 <body>
-    <h1>🤖 AI Phone Testing</h1>
+    <h1>AI Phone Testing</h1>
     
     <!-- Object Detection Section -->
     <div class="ai-container">
@@ -256,9 +258,29 @@
             Loading TensorFlow.js model...
         </div>
         
-        <select class="camera-select" id="camera-select">
-            <option value="">Select Camera...</option>
-        </select>
+        <div class="controls-grid">
+            <select class="camera-select" id="camera-select">
+                <option value="">Select Camera...</option>
+            </select>
+            <select class="camera-select" id="resolution-select">
+                <option value="640x480">640×480 (Quality)</option>
+                <option value="480x360">480×360 (Balanced)</option>
+                <option value="320x240" selected>320×240 (Fast)</option>
+                <option value="160x120">160×120 (Fastest)</option>
+            </select>
+        </div>
+        <div class="controls-grid">
+            <select class="camera-select" id="model-select">
+                <option value="lite_mobilenet_v2" selected>Lite MobileNet v2 (Fast)</option>
+                <option value="mobilenet_v2">MobileNet v2 (Accurate)</option>
+            </select>
+            <select class="camera-select" id="backend-select">
+                <option value="auto" selected>Auto (Best Available)</option>
+                <option value="webgpu">WebGPU</option>
+                <option value="wasm">WASM</option>
+                <option value="webgl">WebGL</option>
+            </select>
+        </div>
         
         <div class="video-container" id="video-container" style="display:none;">
             <video id="camera-feed" playsinline autoplay muted></video>
@@ -266,7 +288,7 @@
         </div>
         
         <div class="controls-grid">
-            <button class='button' onclick='startCamera()' id='start-camera-btn'>Start Camera</button>
+            <button class='button' onclick='initAndStart()' id='start-camera-btn'>Load Model & Start</button>
             <button class='button secondary' onclick='stopCamera()' id='stop-camera-btn' disabled>Stop Camera</button>
             <button class='button' onclick='toggleDetection()' id='toggle-detection-btn' disabled>Start Detection</button>
         </div>
@@ -324,14 +346,25 @@
         let cocoModel = null;
         let videoStream = null;
         let detectionActive = false;
-        let detectionInterval = null;
+        // detectionInterval removed - using requestAnimationFrame instead
         let lastDetections = [];
         let recognition = null;
+        let currentBackend = null;
         
-        // FPS tracking
-        let lastFrameTime = Date.now();
-        let frameCount = 0;
-        let fps = 0;
+        // FPS tracking with high-resolution timing
+        let frameTimes = [];
+        let inferenceTotal = 0;
+        let inferenceCount = 0;
+        let fpsTotal = 0;
+        let fpsCount = 0;
+        
+        // Resolution presets
+        const resolutions = {
+            '640x480': { width: 640, height: 480 },
+            '480x360': { width: 480, height: 360 },
+            '320x240': { width: 320, height: 240 },
+            '160x120': { width: 160, height: 120 }
+        };
         
         // Console logging
         function logToConsole(message, type = 'info') {
@@ -353,30 +386,121 @@
             logToConsole('Console cleared', 'info');
         }
         
-        // Initialize TensorFlow.js
+        // Initialize TensorFlow.js with backend selection
         async function initTensorFlow() {
+            const selectedBackend = document.getElementById('backend-select').value;
+            const selectedModel = document.getElementById('model-select').value;
+            
             try {
-                logToConsole('Loading COCO-SSD model...', 'info');
-                document.getElementById('detection-status').textContent = 'Loading COCO-SSD model...';
+                logToConsole('Initializing TensorFlow.js...', 'info');
+                document.getElementById('detection-status').textContent = 'Initializing backend...';
+                document.getElementById('detection-status').className = 'model-status loading';
                 
-                // Set backend
-                await tf.setBackend('webgl');
-                await tf.ready();
+                // Set backend with fallback chain: WebGPU -> WASM -> WebGL
+                currentBackend = await selectBestBackend(selectedBackend);
+                logToConsole(`Using ${currentBackend.toUpperCase()} backend`, 'success');
                 
                 // Load model
-                cocoModel = await cocoSsd.load();
+                document.getElementById('detection-status').textContent = `Loading ${selectedModel} model...`;
+                logToConsole(`Loading COCO-SSD (${selectedModel})...`, 'info');
+                
+                cocoModel = await cocoSsd.load({ base: selectedModel });
                 modelLoaded = true;
                 
-                document.getElementById('detection-status').textContent = '✓ Model loaded and ready';
+                document.getElementById('detection-status').textContent = `✓ Ready (${currentBackend.toUpperCase()} + ${selectedModel})`;
                 document.getElementById('detection-status').className = 'model-status ready';
                 logToConsole('COCO-SSD model loaded successfully', 'success');
                 
+                return true;
+                
             } catch (error) {
                 console.error('Error loading model:', error);
-                document.getElementById('detection-status').textContent = '✗ Error loading model: ' + error.message;
+                document.getElementById('detection-status').textContent = '✗ Error: ' + error.message;
                 document.getElementById('detection-status').className = 'model-status error';
                 logToConsole('Error loading model: ' + error.message, 'error');
+                return false;
             }
+        }
+        
+        // Select best available backend
+        async function selectBestBackend(preferred) {
+            const backends = preferred === 'auto' 
+                ? ['webgpu', 'wasm', 'webgl'] 
+                : [preferred];
+            
+            for (const backend of backends) {
+                try {
+                    if (backend === 'webgpu') {
+                        if (!('gpu' in navigator)) {
+                            logToConsole('WebGPU not available in this browser', 'warning');
+                            continue;
+                        }
+                    }
+                    
+                    if (backend === 'wasm') {
+                        tf.wasm.setWasmPaths('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.17.0/dist/');
+                    }
+                    
+                    await tf.setBackend(backend);
+                    await tf.ready();
+                    
+                    // Log WASM features if applicable
+                    if (backend === 'wasm') {
+                        const hasSimd = await tf.env().getAsync('WASM_HAS_SIMD_SUPPORT');
+                        const hasThreads = await tf.env().getAsync('WASM_HAS_MULTITHREAD_SUPPORT');
+                        const features = [];
+                        if (hasSimd) features.push('SIMD');
+                        if (hasThreads) features.push('Multi-thread');
+                        logToConsole(`WASM features: ${features.length ? features.join(' + ') : 'Basic'}`, 'info');
+                    }
+                    
+                    return backend;
+                    
+                } catch (e) {
+                    logToConsole(`${backend.toUpperCase()} backend failed: ${e.message}`, 'warning');
+                }
+            }
+            
+            throw new Error('No suitable backend available');
+        }
+        
+        // Track current settings to detect changes
+        let loadedModel = null;
+        let loadedBackend = null;
+        
+        // Initialize and start camera together
+        async function initAndStart() {
+            document.getElementById('start-camera-btn').disabled = true;
+            document.getElementById('start-camera-btn').textContent = 'Loading...';
+            
+            const selectedModel = document.getElementById('model-select').value;
+            const selectedBackend = document.getElementById('backend-select').value;
+            
+            // Reload if model or backend changed
+            const needsReload = !modelLoaded || 
+                                loadedModel !== selectedModel || 
+                                loadedBackend !== selectedBackend;
+            
+            if (needsReload) {
+                // Dispose old model if exists
+                if (cocoModel) {
+                    cocoModel.dispose();
+                    cocoModel = null;
+                    modelLoaded = false;
+                }
+                
+                const success = await initTensorFlow();
+                if (!success) {
+                    document.getElementById('start-camera-btn').disabled = false;
+                    document.getElementById('start-camera-btn').textContent = 'Load Model & Start';
+                    return;
+                }
+                
+                loadedModel = selectedModel;
+                loadedBackend = selectedBackend;
+            }
+            
+            await startCamera();
         }
         
         // Get available cameras
@@ -414,13 +538,15 @@
         async function startCamera() {
             try {
                 const selectedCamera = document.getElementById('camera-select').value;
+                const selectedResolution = document.getElementById('resolution-select').value;
+                const res = resolutions[selectedResolution] || resolutions['320x240'];
                 
                 const constraints = {
                     video: {
                         facingMode: selectedCamera ? undefined : { ideal: 'environment' },
                         deviceId: selectedCamera ? { exact: selectedCamera } : undefined,
-                        width: { ideal: 640 },
-                        height: { ideal: 480 }
+                        width: { ideal: res.width },
+                        height: { ideal: res.height }
                     }
                 };
                 
@@ -433,14 +559,22 @@
                     const canvas = document.getElementById('canvas-overlay');
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
+                    // Log actual resolution (may differ from requested)
+                    logToConsole(`Actual video resolution: ${video.videoWidth}×${video.videoHeight}`, 'info');
                 };
                 
                 document.getElementById('video-container').style.display = 'block';
                 document.getElementById('start-camera-btn').disabled = true;
+                document.getElementById('start-camera-btn').textContent = 'Running';
                 document.getElementById('stop-camera-btn').disabled = false;
                 document.getElementById('toggle-detection-btn').disabled = !modelLoaded;
                 
-                logToConsole('Camera started', 'success');
+                // Disable settings while running
+                document.getElementById('resolution-select').disabled = true;
+                document.getElementById('model-select').disabled = true;
+                document.getElementById('backend-select').disabled = true;
+                
+                logToConsole(`Camera started (${res.width}×${res.height})`, 'success');
                 
                 // Refresh camera list after permission granted
                 await getCameras();
@@ -465,8 +599,14 @@
             
             document.getElementById('video-container').style.display = 'none';
             document.getElementById('start-camera-btn').disabled = false;
+            document.getElementById('start-camera-btn').textContent = 'Load Model & Start';
             document.getElementById('stop-camera-btn').disabled = true;
             document.getElementById('toggle-detection-btn').disabled = true;
+            
+            // Re-enable settings
+            document.getElementById('resolution-select').disabled = false;
+            document.getElementById('model-select').disabled = false;
+            document.getElementById('backend-select').disabled = false;
             
             logToConsole('Camera stopped', 'info');
         }
@@ -476,19 +616,33 @@
             if (detectionActive) {
                 // Stop detection
                 detectionActive = false;
-                if (detectionInterval) {
-                    clearInterval(detectionInterval);
-                    detectionInterval = null;
-                }
                 document.getElementById('toggle-detection-btn').textContent = 'Start Detection';
                 logToConsole('Detection stopped', 'info');
             } else {
                 // Start detection
                 detectionActive = true;
-                runDetection();
-                detectionInterval = setInterval(runDetection, 500); // Run every 500ms
+                // Reset timing stats
+                frameTimes = [];
+                inferenceTotal = 0;
+                inferenceCount = 0;
+                fpsTotal = 0;
+                fpsCount = 0;
                 document.getElementById('toggle-detection-btn').textContent = 'Stop Detection';
                 logToConsole('Detection started', 'success');
+                // Use continuous loop instead of setInterval
+                runDetectionLoop();
+            }
+        }
+        
+        // Continuous detection loop using requestAnimationFrame
+        async function runDetectionLoop() {
+            if (!detectionActive) return;
+            
+            await runDetection();
+            
+            // Continue loop if still active
+            if (detectionActive) {
+                requestAnimationFrame(runDetectionLoop);
             }
         }
         
@@ -500,12 +654,41 @@
             const canvas = document.getElementById('canvas-overlay');
             const ctx = canvas.getContext('2d');
             
-            const startTime = Date.now();
+            // Use high-resolution timing
+            const startTime = performance.now();
             
             try {
                 // Run prediction
                 const predictions = await cocoModel.detect(video);
-                const inferenceTime = Date.now() - startTime;
+                const inferenceTime = performance.now() - startTime;
+                
+                // Track inference times for averaging
+                inferenceTotal += inferenceTime;
+                inferenceCount++;
+                const avgInference = inferenceTotal / inferenceCount;
+                
+                // Track frame times for accurate FPS (rolling window of last 30 frames)
+                const now = performance.now();
+                frameTimes.push(now);
+                
+                // Keep only last 30 frame timestamps
+                while (frameTimes.length > 30) {
+                    frameTimes.shift();
+                }
+                
+                // Calculate FPS from frame timestamps
+                let fps = 0;
+                if (frameTimes.length >= 2) {
+                    const timeSpan = frameTimes[frameTimes.length - 1] - frameTimes[0];
+                    fps = ((frameTimes.length - 1) / timeSpan) * 1000;
+                    
+                    // Track FPS for averaging (only after we have stable readings)
+                    if (frameTimes.length >= 10) {
+                        fpsTotal += fps;
+                        fpsCount++;
+                    }
+                }
+                const avgFps = fpsCount > 0 ? fpsTotal / fpsCount : 0;
                 
                 // Clear canvas
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -535,22 +718,15 @@
                 lastDetections = predictions;
                 updateDetectionsList(predictions);
                 
-                // Log significant detections (only log when objects change)
-                if (predictions.length > 0 && frameCount % 10 === 0) { // Log every 10 frames
+                // Log significant detections (only log occasionally to avoid spam)
+                if (predictions.length > 0 && inferenceCount % 10 === 0) {
                     const topDetection = predictions[0];
                     logToConsole(`Detected: ${topDetection.class} (${Math.round(topDetection.score * 100)}%)`, 'success');
                 }
                 
-                // Update stats
-                frameCount++;
-                const now = Date.now();
-                if (now - lastFrameTime > 1000) {
-                    fps = frameCount;
-                    frameCount = 0;
-                    lastFrameTime = now;
-                }
+                // Update stats with precise measurements
                 document.getElementById('detection-stats').textContent = 
-                    `FPS: ${fps} | Inference: ${inferenceTime}ms | Objects: ${predictions.length}`;
+                    `FPS: ${fps.toFixed(1)} (avg: ${avgFps.toFixed(1)}) | Inference: ${inferenceTime.toFixed(1)}ms (avg: ${avgInference.toFixed(1)}ms) | Objects: ${predictions.length}`;
                 
             } catch (error) {
                 console.error('Detection error:', error);
@@ -670,10 +846,10 @@
         
         // Initialize on load
         window.addEventListener('load', () => {
-            initTensorFlow();
+            // Don't load model until user clicks start
             initVoiceControl();
             getCameras();
-            logToConsole('AI Phone Testing initialized', 'success');
+            logToConsole('AI Phone Testing initialized - select options and click Start', 'success');
         });
         
         // Clean up on page unload

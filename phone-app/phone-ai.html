@@ -333,7 +333,11 @@
     <div class="console-container">
         <div class="console-header">
             <h2>📋 Activity Log</h2>
-            <button class='button secondary' onclick='clearConsole()' style="padding: 5px 15px; font-size: 12px;">Clear</button>
+            <div style="display: flex; gap: 8px;">
+                <button class='button secondary' onclick='checkCacheStatus()' style="padding: 5px 15px; font-size: 12px;">Cache Status</button>
+                <button class='button secondary' onclick='clearCache()' style="padding: 5px 15px; font-size: 12px;">Clear Cache</button>
+                <button class='button secondary' onclick='clearConsole()' style="padding: 5px 15px; font-size: 12px;">Clear Log</button>
+            </div>
         </div>
         <div id="console" class="console">
             <div class="text-muted">Initializing...</div>
@@ -844,8 +848,71 @@
             }
         }
         
+        // Register Service Worker for offline caching
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registration = await navigator.serviceWorker.register('./sw.js');
+                    logToConsole('Service Worker registered - libraries will be cached locally', 'success');
+                    
+                    registration.addEventListener('updatefound', () => {
+                        logToConsole('New cache version available', 'info');
+                    });
+                    
+                    // Check cache status after a brief delay
+                    setTimeout(checkCacheStatus, 1000);
+                } catch (error) {
+                    logToConsole('Service Worker registration failed: ' + error.message, 'warning');
+                }
+            } else {
+                logToConsole('Service Workers not supported - libraries will load from CDN each time', 'warning');
+            }
+        }
+        
+        // Check what's cached
+        async function checkCacheStatus() {
+            if (!navigator.serviceWorker.controller) {
+                logToConsole('Waiting for Service Worker to activate...', 'info');
+                return;
+            }
+            
+            const messageChannel = new MessageChannel();
+            messageChannel.port1.onmessage = (event) => {
+                if (event.data.count !== undefined) {
+                    logToConsole(`Cache status: ${event.data.count} resources cached locally`, 'info');
+                }
+            };
+            
+            navigator.serviceWorker.controller.postMessage(
+                { type: 'GET_CACHE_SIZE' },
+                [messageChannel.port2]
+            );
+        }
+        
+        // Clear cache (useful for debugging or forcing refresh)
+        async function clearCache() {
+            if (!navigator.serviceWorker.controller) {
+                logToConsole('No active Service Worker', 'warning');
+                return;
+            }
+            
+            const messageChannel = new MessageChannel();
+            messageChannel.port1.onmessage = (event) => {
+                if (event.data.success) {
+                    logToConsole('Cache cleared - libraries will be re-downloaded on next load', 'success');
+                }
+            };
+            
+            navigator.serviceWorker.controller.postMessage(
+                { type: 'CLEAR_CACHE' },
+                [messageChannel.port2]
+            );
+        }
+        
         // Initialize on load
         window.addEventListener('load', () => {
+            // Register service worker for caching
+            registerServiceWorker();
             // Don't load model until user clicks start
             initVoiceControl();
             getCameras();

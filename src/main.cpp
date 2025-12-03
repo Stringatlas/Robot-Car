@@ -54,6 +54,9 @@ void setupOTA() {
     }
     TELEM_LOGF("✓ mDNS responder started: %s.local", OTA_HOSTNAME);
     
+    // Advertise HTTP service so browsers can find the web server
+    MDNS.addService("http", "tcp", WEB_SERVER_PORT);
+    
     // Port defaults to 3232
     // ArduinoOTA.setPort(3232);
     

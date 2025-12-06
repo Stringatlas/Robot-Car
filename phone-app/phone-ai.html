@@ -9,6 +9,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-webgpu@4.17.0/dist/tf-backend-webgpu.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-backend-wasm@4.17.0/dist/tf-backend-wasm.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/speech-commands@0.5.4/dist/speech-commands.min.js"></script>
     
     <style>
         * {
@@ -329,6 +330,46 @@
         </div>
     </div>
     
+    <!-- TensorFlow.js Speech Commands Section -->
+    <div class="ai-container">
+        <h2>TF.js Speech Commands</h2>
+        
+        <div class="model-status loading" id="speech-model-status">
+            Model not loaded
+        </div>
+        
+        <div class="controls-grid">
+            <select class="camera-select" id="speech-vocab-select">
+                <option value="directional4w" selected>Directional (up/down/left/right)</option>
+                <option value="18w">Full Vocabulary (18 words)</option>
+            </select>
+        </div>
+        
+        <div class="controls-grid">
+            <button class='button' onclick='loadSpeechModel()' id='load-speech-btn'>Load Model</button>
+            <button class='button' onclick='startSpeechRecognition()' id='start-speech-btn' disabled>
+                Start Listening<span class="voice-indicator" id="speech-indicator"></span>
+            </button>
+            <button class='button secondary' onclick='stopSpeechRecognition()' id='stop-speech-btn' disabled>Stop</button>
+        </div>
+        
+        <div style="margin: 15px 0;">
+            <strong>Detected Word:</strong>
+            <div id="speech-result" style="padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px; margin-top: 5px; min-height: 40px;">
+                <span class="text-muted">Waiting for speech input...</span>
+            </div>
+        </div>
+        
+        <div class="detection-list" id="speech-scores">
+            <div class="text-muted">Word scores will appear here...</div>
+        </div>
+        
+        <div style="font-size: 12px; color: #999; margin-top: 10px;">
+            <strong>Directional words:</strong> "up", "down", "left", "right"<br>
+            <strong>Full vocabulary:</strong> "zero" to "nine", "up", "down", "left", "right", "go", "stop", "yes", "no"
+        </div>
+    </div>
+    
     <!-- Console -->
     <div class="console-container">
         <div class="console-header">
@@ -424,6 +465,7 @@
         window.addEventListener('load', () => {
             registerServiceWorker();
             initVoiceControl();
+            initSpeechCommands();
             getCameras();
             logToConsole('AI Phone Testing initialized - select options and click Start', 'success');
         });
@@ -431,6 +473,7 @@
         window.addEventListener('beforeunload', () => {
             stopCamera();
             stopVoiceControl();
+            stopSpeechRecognition();
         });
     </script>
     <script src="camera.js"></script>

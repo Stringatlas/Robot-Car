@@ -138,7 +138,7 @@ async function loadSpeechModel() {
 
 let speechDetectionBuffer = [];
 let lastCommandTime = 0;
-const REQUIRED_CONSECUTIVE = 2;
+const REQUIRED_CONSECUTIVE = 1;
 const COMMAND_COOLDOWN_MS = 500;
 
 async function startSpeechRecognition() {

@@ -127,4 +127,4 @@ private:
     }
 };
 
-#endif // CALIBRATION_COMMAND_H
+#endif

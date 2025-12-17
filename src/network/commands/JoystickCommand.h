@@ -58,4 +58,4 @@ public:
     }
 };
 
-#endif // JOYSTICK_COMMAND_H
+#endif

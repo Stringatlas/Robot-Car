@@ -28,11 +28,10 @@ public:
     float compute(float setpoint, float measurement);
     void reset();
     
-    // Getters
     float getKp() const { return kp; }
     float getKi() const { return ki; }
     float getKd() const { return kd; }
     float getIntegral() const { return integral; }
 };
 
-#endif // PIDCONTROLLER_H
+#endif

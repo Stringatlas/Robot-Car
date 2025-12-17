@@ -44,7 +44,7 @@ const WSManager = (function() {
                     updateControlStatus(data.controllingClientId);
                 }
                 else if (data.type === 'log') {
-                    addLogToConsole(data.message);
+                    addLogToConsole(data.message, data.logType);
                     saveLogToStorage(data.message);
                 }
                 else if (data.left && data.right) {
@@ -117,7 +117,7 @@ const WSManager = (function() {
         try {
             const logs = JSON.parse(sessionStorage.getItem(CONSOLE_STORAGE_KEY) || '[]');
             logs.forEach(log => {
-                addLogToConsole(log.message);
+                addLogToConsole(log.message, log.logType);
             });
         } catch(e) {
             console.error('Error loading from sessionStorage:', e);

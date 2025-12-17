@@ -1,6 +1,5 @@
 #include "Encoder.h"
 
-// Initialize static members
 Encoder* Encoder::leftInstance = nullptr;
 Encoder* Encoder::rightInstance = nullptr;
 
@@ -15,7 +14,6 @@ void Encoder::begin() {
     lastA = digitalRead(pinA);
     lastB = digitalRead(pinB);
     
-    // Attach interrupts based on which instance this is
     if (this == leftInstance) {
         attachInterrupt(digitalPinToInterrupt(pinA), isrA_Left, CHANGE);
         attachInterrupt(digitalPinToInterrupt(pinB), isrB_Left, CHANGE);
@@ -30,14 +28,15 @@ void Encoder::begin() {
 void Encoder::update() {
     unsigned long currentTime = millis();
     unsigned long deltaTime = currentTime - lastTimeMs;
-    
-    if (deltaTime >= 100) {  // Update every 100ms
+
+    if (deltaTime >= UPDATE_INTERVAL_MS)
+    {
         long deltaCount = count - lastCount;
         float revolutions = (float)deltaCount / ppr;
-        float distance = revolutions * PI * wheelDiameter;  // cm
+        float distance = revolutions * PI * wheelDiameter;
         float timeSec = deltaTime / 1000.0;
         
-        velocity = distance / timeSec;  // cm/s
+        velocity = distance / timeSec;
         
         lastCount = count;
         lastTimeMs = currentTime;
@@ -50,10 +49,9 @@ float Encoder::getDistance() const {
 }
 
 float Encoder::getRPM() const {
-    // velocity is in cm/s, convert to RPM
-    float circumference = PI * wheelDiameter;  // cm
+    float circumference = PI * wheelDiameter;
     float rps = velocity / circumference;
-    return rps * 60.0;  // RPM
+    return rps * 60.0;
 }
 
 void Encoder::handleInterruptA() {
@@ -64,19 +62,18 @@ void Encoder::handleInterruptA() {
         int direction = 0;
         if (A == HIGH) {
             if (B == LOW) {
-                direction = 1;  // Clockwise
+                direction = 1;
             } else {
-                direction = -1;  // Counterclockwise
+                direction = -1;
             }
         } else {
             if (B == HIGH) {
-                direction = 1;  // Clockwise
+                direction = 1;
             } else {
-                direction = -1;  // Counterclockwise
+                direction = -1;
             }
         }
-        
-        // Apply reversal if needed
+    
         count += reversed ? -direction : direction;
         lastA = A;
     }
@@ -90,25 +87,23 @@ void Encoder::handleInterruptB() {
         int direction = 0;
         if (B == HIGH) {
             if (A == HIGH) {
-                direction = 1;  // Clockwise
+                direction = 1;
             } else {
-                direction = -1;  // Counterclockwise
+                direction = -1;
             }
         } else {
             if (A == LOW) {
-                direction = 1;  // Clockwise
+                direction = 1;
             } else {
-                direction = -1;  // Counterclockwise
+                direction = -1;
             }
         }
         
-        // Apply reversal if needed
         count += reversed ? -direction : direction;
         lastB = B;
     }
 }
 
-// Static ISR callbacks for left encoder
 void IRAM_ATTR Encoder::isrA_Left() {
     if (leftInstance) leftInstance->handleInterruptA();
 }
@@ -117,7 +112,6 @@ void IRAM_ATTR Encoder::isrB_Left() {
     if (leftInstance) leftInstance->handleInterruptB();
 }
 
-// Static ISR callbacks for right encoder
 void IRAM_ATTR Encoder::isrA_Right() {
     if (rightInstance) rightInstance->handleInterruptA();
 }

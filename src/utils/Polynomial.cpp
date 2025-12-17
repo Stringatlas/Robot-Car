@@ -2,9 +2,8 @@
 #include <Arduino.h>
 
 Polynomial::Polynomial() : degree_(1) {
-    // Default: identity function y = x
-    coefficients_[0] = 0.0f;  // a0
-    coefficients_[1] = 1.0f;  // a1
+    coefficients_[0] = 0.0f;
+    coefficients_[1] = 1.0f;
     for (int i = 2; i <= MAX_DEGREE; i++) {
         coefficients_[i] = 0.0f;
     }
@@ -37,10 +36,7 @@ Polynomial::Polynomial(const float* coeffs, int degree) : degree_(degree) {
 }
 
 float Polynomial::evaluate(float x) const {
-    // Horner's method for efficient polynomial evaluation
-    // For polynomial a0 + a1*x + a2*x^2 + a3*x^3:
-    // = a0 + x*(a1 + x*(a2 + x*a3))
-    
+    // Horner's method
     float result = coefficients_[degree_];
     for (int i = degree_ - 1; i >= 0; i--) {
         result = result * x + coefficients_[i];

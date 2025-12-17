@@ -6,10 +6,9 @@ BatteryMonitor::BatteryMonitor(uint8_t pin, float multiplier)
 
 void BatteryMonitor::begin() {
     pinMode(adcPin, INPUT);
-    analogReadResolution(12);  // Set 12-bit resolution (0-4095)
+    analogReadResolution(12);
     analogSetAttenuation(ADC_11db);  // Set ADC to read up to 3.3V
     
-    // Characterize ADC for accurate voltage readings
     esp_adc_cal_characterize(ADC_UNIT_1, ADC_ATTEN_DB_12, ADC_WIDTH_BIT_12, 1100, &adcChars);
     
     TELEM_LOG("✓ Battery monitor initialized (readings may be erratic)");

@@ -17,15 +17,13 @@ void WebServerManager::begin(Encoder* left, Encoder* right, DriveController* dri
     velocityController = velCtrl;
     configManager = config;
     
-    // Initialize Telemetry with WebSocket
     Telemetry::getInstance().begin(&ws);
     
-    // Initialize LittleFS
     if (!LittleFS.begin(true)) {
-        TELEM_LOG("ERROR: LittleFS Mount Failed");
+        TELEM_LOG_ERROR("LittleFS Mount Failed");
         return;
     }
-    TELEM_LOG("✓ LittleFS mounted successfully");
+    TELEM_LOG_SUCCESS("LittleFS mounted successfully");
     
     // Setup WebSocket
     ws.onEvent([this](AsyncWebSocket *server, AsyncWebSocketClient *client, 
@@ -36,8 +34,8 @@ void WebServerManager::begin(Encoder* left, Encoder* right, DriveController* dri
     
     setupRoutes();
     server.begin();
-    TELEM_LOG("✓ Web server started");
-    TELEM_LOG("✓ WebSocket ready at /ws");
+    TELEM_LOG_SUCCESS("Web server started at /ws");
+    TELEM_LOG_INFO("==========");
 }
 
 void WebServerManager::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client, 

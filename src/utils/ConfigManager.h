@@ -6,7 +6,7 @@
 #include <LittleFS.h>
 
 /**
- * ConfigManager - Persistent storage for robot configuration and tuning parameters
+ * Persistent storage for robot configuration and tuning parameters
  * Stores configuration in JSON format on LittleFS filesystem
  */
 class ConfigManager {
@@ -54,45 +54,20 @@ public:
     
     ConfigManager(const char* configPath = "/config.json");
     
-    /**
-     * Load configuration from filesystem
-     * @return true if successful, false if file doesn't exist or invalid
-     */
     bool load();
     
-    /**
-     * Save current configuration to filesystem
-     * @return true if successful, false on error
-     */
     bool save();
     
-    /**
-     * Reset to default configuration
-     */
     void reset();
     
-    /**
-     * Get current configuration
-     */
     Config& getConfig() { return config; }
+
     const Config& getConfig() const { return config; }
-    
-    /**
-     * Update configuration from JSON string
-     * @param jsonStr JSON string containing configuration
-     * @return true if successful
-     */
+
     bool updateFromJson(const String& jsonStr);
     
-    /**
-     * Get configuration as JSON string
-     * @return JSON string representation
-     */
     String toJson() const;
     
-    /**
-     * Print configuration to Serial
-     */
     void print() const;
 
 private:
@@ -100,4 +75,4 @@ private:
     Config config;
 };
 
-#endif // CONFIGMANAGER_H
+#endif

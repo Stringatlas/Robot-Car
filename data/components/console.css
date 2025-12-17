@@ -75,6 +75,18 @@
     color: #4CAF50;
 }
 
+.console .console-update {
+    color: #00bcd4;
+}
+
+.console .console-command {
+    color: #9c27b0;
+}
+
+.console .console-debug {
+    color: #607d8b;
+}
+
 /* Two-column layout for desktop */
 .main-layout {
     display: grid;

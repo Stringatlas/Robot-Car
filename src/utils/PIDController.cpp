@@ -22,10 +22,9 @@ void PIDController::setIntegralLimits(float min, float max) {
 
 float PIDController::compute(float setpoint, float measurement) {
     unsigned long now = millis();
-    float dt = (now - lastTime) / 1000.0;  // Convert to seconds
+    float dt = (now - lastTime) / 1000.0;
     
     if (lastTime == 0 || dt <= 0 || dt > 1.0) {
-        // First run or invalid dt
         lastTime = now;
         previousError = setpoint - measurement;
         return 0;

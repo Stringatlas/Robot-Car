@@ -5,26 +5,23 @@
 DriveController::DriveController() : lastLeftPWM(0), lastRightPWM(0) {}
 
 void DriveController::begin() {
-    // Configure motor pins
     pinMode(MOTOR_IN1, OUTPUT);
     pinMode(MOTOR_IN2, OUTPUT);
     pinMode(MOTOR_IN3, OUTPUT);
     pinMode(MOTOR_IN4, OUTPUT);
     
-    // Configure PWM channels
     ledcSetup(MOTOR_LEFT_PWM_CHANNEL, MOTOR_PWM_FREQ, MOTOR_PWM_RESOLUTION);
     ledcSetup(MOTOR_RIGHT_PWM_CHANNEL, MOTOR_PWM_FREQ, MOTOR_PWM_RESOLUTION);
     ledcAttachPin(MOTOR_ENA, MOTOR_RIGHT_PWM_CHANNEL);
     ledcAttachPin(MOTOR_ENB, MOTOR_LEFT_PWM_CHANNEL);
     
-    TELEM_LOG("✓ Drive controller initialized");
+    TELEM_LOG_SUCCESS("Drive controller initialized");
 }
 
 void DriveController::setLeftMotorPower(float power) {
     power = constrain(power, -1.0, 1.0);
     int pwm = abs(power) * 255;
 
-    // Store for broadcasting (with sign)
     lastLeftPWM = (power >= 0) ? pwm : -pwm;
     
     if (power > 0.05) {
@@ -73,18 +70,15 @@ void DriveController::setPowerControl(float forward, float turn) {
     float leftSpeed = forward + turn;
     float rightSpeed = forward - turn;
     
-    // Normalize if either exceeds 1.0 to preserve turning ratio
     float maxSpeed = max(abs(leftSpeed), abs(rightSpeed));
     if (maxSpeed > 1.0) {
         leftSpeed /= maxSpeed;
         rightSpeed /= maxSpeed;
     }
     
-    // Use the modular power functions
     setLeftMotorPower(leftSpeed);
     setRightMotorPower(rightSpeed);
     
-    // Debug output
-    TELEM_LOGF("🕹️ Fwd:%.2f Turn:%.2f -> L:%.2f(%d) R:%.2f(%d)", 
+    TELEM_LOGF_INFO("Fwd:%.2f Turn:%.2f -> L:%.2f(%d) R:%.2f(%d)", 
                forward, turn, leftSpeed, lastLeftPWM, rightSpeed, lastRightPWM);
 }

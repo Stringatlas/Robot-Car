@@ -33,6 +33,6 @@ function changeEsp32Ip() {
     const newIp = prompt('Enter new ESP32 IP address:', currentIp);
     if (newIp && newIp !== currentIp) {
         localStorage.setItem('esp32_ip', newIp);
-        location.reload(); // Reconnect with new IP
+        location.reload();
     }
 }

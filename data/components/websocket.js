@@ -171,5 +171,4 @@ const WSManager = (function() {
     };
 })();
 
-// Auto-connect when script loads
 WSManager.connect();

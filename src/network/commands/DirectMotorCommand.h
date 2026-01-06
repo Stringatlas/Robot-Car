@@ -53,4 +53,4 @@ public:
     }
 };
 
-#endif // DIRECT_MOTOR_COMMAND_H
+#endif

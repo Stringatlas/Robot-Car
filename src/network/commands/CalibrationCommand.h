@@ -17,7 +17,7 @@ public:
         int startPWM;
         int endPWM;
         int stepSize;
-        unsigned long holdTime;  // milliseconds to hold each PWM value
+        unsigned long holdTime;  // milliseconds
     };
     
     struct DataPoint {

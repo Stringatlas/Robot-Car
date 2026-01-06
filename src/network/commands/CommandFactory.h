@@ -3,6 +3,7 @@
 
 #include "ICommand.h"
 #include "JoystickCommand.h"
+#include "DirectMotorCommand.h"
 #include "VelocityCommand.h"
 #include "CalibrationCommand.h"
 #include "AutonomousSequenceCommand.h"
@@ -41,6 +42,10 @@ public:
     
     std::unique_ptr<JoystickCommand> createJoystickCommand() {
         return std::make_unique<JoystickCommand>(driveController);
+    }
+    
+    std::unique_ptr<DirectMotorCommand> createDirectMotorCommand(float left = 0, float right = 0) {
+        return std::make_unique<DirectMotorCommand>(driveController, left, right);
     }
     
     std::unique_ptr<VelocityCommand> createVelocityCommand(float velocity) {

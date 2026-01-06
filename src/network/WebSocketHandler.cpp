@@ -2,7 +2,7 @@
 #include "Telemetry.h"
 
 WebSocketHandler::WebSocketHandler(const char* path) 
-    : ws(path), messageCallback(nullptr), connectionCallback(nullptr) {}
+    : ws(path), messageCallback(nullptr), binaryMessageCallback(nullptr), connectionCallback(nullptr) {}
 
 void WebSocketHandler::begin(AsyncWebServer* server) {
     ws.onEvent([this](AsyncWebSocket* server, AsyncWebSocketClient* client,
@@ -15,6 +15,10 @@ void WebSocketHandler::begin(AsyncWebServer* server) {
 
 void WebSocketHandler::onMessage(MessageCallback callback) {
     messageCallback = callback;
+}
+
+void WebSocketHandler::onBinaryMessage(BinaryMessageCallback callback) {
+    binaryMessageCallback = callback;
 }
 
 void WebSocketHandler::onConnection(ConnectionCallback callback) {
@@ -38,12 +42,19 @@ void WebSocketHandler::onWebSocketEvent(AsyncWebSocket* server, AsyncWebSocketCl
     } 
     else if (type == WS_EVT_DATA) {
         AwsFrameInfo* info = (AwsFrameInfo*)arg;
-        if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-            data[len] = 0;
-            String message = (char*)data;
-            
-            if (messageCallback) {
-                messageCallback(client->id(), message);
+        if (info->final && info->index == 0 && info->len == len) {
+            if (info->opcode == WS_TEXT) {
+                data[len] = 0;
+                String message = (char*)data;
+                
+                if (messageCallback) {
+                    messageCallback(client->id(), message);
+                }
+            }
+            else if (info->opcode == WS_BINARY) {
+                if (binaryMessageCallback) {
+                    binaryMessageCallback(client->id(), data, len);
+                }
             }
         }
     }
@@ -70,6 +81,17 @@ void WebSocketHandler::broadcastJson(const JsonDocument& doc) {
     String json;
     serializeJson(doc, json);
     broadcastText(json);
+}
+
+void WebSocketHandler::sendBinary(uint32_t clientId, const uint8_t* data, size_t len) {
+    AsyncWebSocketClient* client = ws.client(clientId);
+    if (client && client->status() == WS_CONNECTED) {
+        client->binary(data, len);
+    }
+}
+
+void WebSocketHandler::broadcastBinary(const uint8_t* data, size_t len) {
+    ws.binaryAll(data, len);
 }
 
 bool WebSocketHandler::parseJson(const String& message, JsonDocument& doc) {

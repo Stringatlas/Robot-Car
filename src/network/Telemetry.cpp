@@ -24,7 +24,7 @@ void Telemetry::log(const String& message, LogType type) {
         case LogType::Success: typeStr = "success"; break;
         default: typeStr = "info"; break;
     }
-    Serial.println(message);
+    Serial.println(typeStr + ": " + message);
     String timestampedMsg = "[" + String(millis()) + "ms] " + message;
     addToBuffer(timestampedMsg);
     broadcast(timestampedMsg, typeStr);
